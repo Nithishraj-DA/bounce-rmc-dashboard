@@ -288,29 +288,30 @@ async function load(){
   document.getElementById("sync-lbl").textContent = "Loading...";
 
   const result = await fetchAll();
-  // Handle both {summary:[], parts:[]} and direct array responses
   let data, partsData;
   if(!result){ 
     document.getElementById("kpis").innerHTML = `<div class="loading" style="grid-column:1/-1;color:var(--red)">⚠️ Error loading data</div>`;
     document.getElementById("sync-lbl").textContent = "Error";
     return;
   }
-  if(Array.isArray(result)){
-    // Direct array (shouldn't happen but safety net)
-    data = result; partsData = [];
-  } else if(result.summary) {
-    data = result.summary; partsData = result.parts || [];
-  } else {
-    console.error("Unexpected response:", JSON.stringify(result).slice(0,200));
-    document.getElementById("kpis").innerHTML = `<div class="loading" style="grid-column:1/-1;color:var(--red)">⚠️ Unexpected response format</div>`;
+  data      = result.summary || [];
+  partsData = result.parts   || [];
+  if(!result || (!result.summary && !result.totals)){
+    console.error("Unexpected response:", JSON.stringify(result||{}).slice(0,200));
+    document.getElementById("kpis").innerHTML = `<div class="loading" style="grid-column:1/-1;color:var(--red)">⚠️ Error loading data</div>`;
     document.getElementById("sync-lbl").textContent = "Error";
     return;
   }
 
-  const parts  = data.filter(r=>r.line_type==="Part");
-  const labour = data.filter(r=>r.line_type==="Labour");
-  const tc  = sm(data,"total_cost"), pc = sm(data,"part_cost"), lc = sm(data,"labour_cost");
-  const jcs = ujc(data), avg = jcs>0?tc/jcs:0, pjc = sjp(data), att = jcs>0?pjc/jcs*100:0;
+  // Use totals for correct KPI numbers (avoids double-counting JCs across groups)
+  const totals = result.totals || {};
+  const tc  = parseFloat(totals.total_cost)   || sm(data,"total_cost");
+  const pc  = parseFloat(totals.part_cost)    || sm(data,"part_cost");
+  const lc  = parseFloat(totals.labour_cost)  || sm(data,"labour_cost");
+  const jcs = parseInt(totals.unique_jcs)     || 0;
+  const pjc = parseInt(totals.jcs_with_parts) || 0;
+  const avg = jcs>0 ? tc/jcs : 0;
+  const att = jcs>0 ? pjc/jcs*100 : 0;
 
   const s = document.getElementById("f-start").value;
   const e = document.getElementById("f-end").value;
