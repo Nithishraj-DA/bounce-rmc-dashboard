@@ -345,24 +345,25 @@ function buildThresholds() {
     cost: [p(costs,.33), p(costs,.66)],   // lower=better
   };
 }
-// Util / Uptime: green > p66, yellow p33-p66, red < p33
 function cfHigh(v) {
   const n=parseFloat(v); if(isNaN(n))return '';
-  if(n>=(TH.util[1]??80))return 'hi-green'; if(n>=(TH.util[0]??60))return 'mid-yellow'; return 'lo-red';
+  const lo=TH.util?.[0], hi=TH.util?.[1];
+  if(hi!=null&&n>=hi)return 'hi-green'; if(lo!=null&&n>=lo)return 'mid-yellow'; return 'lo-red';
 }
-// OOS: green < p33, yellow p33-p66, red > p66
 function cfOOS(v) {
   const n=parseFloat(v); if(isNaN(n))return '';
-  if(n<=(TH.oos[0]??3))return 'lo-green'; if(n<=(TH.oos[1]??8))return 'mid-yellow'; return 'hi-red';
+  const lo=TH.oos?.[0], hi=TH.oos?.[1];
+  if(lo!=null&&n<=lo)return 'lo-green'; if(hi!=null&&n<=hi)return 'mid-yellow'; return 'hi-red';
 }
-// Cost/KM, Cost%Rev, Avg/Bike: green < p33, yellow p33-p66, red > p66
 function cfLow(v, th) {
-  const n=parseFloat(String(v).replace(/[₹%]/g,'')); if(isNaN(n))return '';
-  if(n<=(th[0]??0))return 'lo-green'; if(n<=(th[1]??0))return 'mid-yellow'; return 'hi-red';
+  if(!th)return '';
+  const n=parseFloat(String(v).replace(/[\u20b9%]/g,'')); if(isNaN(n))return '';
+  if(th[0]!=null&&n<=th[0])return 'lo-green'; if(th[1]!=null&&n<=th[1])return 'mid-yellow'; return 'hi-red';
 }
 function cfAvgBg(v) {
   const n=parseFloat(v); if(isNaN(n))return '';
-  if(n<=(TH.cost[0]??0))return 'bg-green'; if(n<=(TH.cost[1]??0))return 'bg-yellow'; return 'bg-red';
+  const lo=TH.cost?.[0], hi=TH.cost?.[1];
+  if(lo!=null&&n<=lo)return 'bg-green'; if(hi!=null&&n<=hi)return 'bg-yellow'; return 'bg-red';
 }
 
 // ── RENDER ──
