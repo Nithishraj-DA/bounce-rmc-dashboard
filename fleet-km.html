@@ -206,57 +206,37 @@ const PER_PAGE = 50;
 let allData=[], filtered=[], detailData=[], costType='total', pg=1, isLive=false;
 
 // ── FETCH ──
-async function load(s='', e='') {
+async function load(month='all_time') {
   document.getElementById('loading').style.display='flex';
   document.getElementById('content').style.display='none';
   document.getElementById('error').style.display='none';
-  document.getElementById('load-msg').textContent = s||e ? 'Fetching from Metabase with date filter… (~30s)' : 'Loading from Supabase…';
+  document.getElementById('load-msg').textContent = 'Loading from Supabase…';
 
   try {
-    if (s || e) {
-      // Date filter → Metabase proxy (live)
-      let url = PROXY + (s||e ? '?' : '');
-      if (s) url += 'start_date=' + s + '&';
-      if (e) url += 'end_date='   + e;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Proxy error ' + res.status);
-      const raw = await res.json();
-      allData = raw.map(r => ({
-        bike_id: r['Bike ID'], reg_number: r['Reg_Number'], city: r['City'],
-        hub_name: r['Hub Name'], model_name: r['Model Name'], status: r['Status'],
-        odometer_bucket: r['Odometer Bucket'], current_odometer: r['Current Odometer'],
-        filtered_odometer: r['Filtered Odometer'], active_days: r['Active Days'],
-        total_life_days: r['Total Life of Bike (Days)'], utilization_pct: r['Utilization %'],
-        oos_pct: r['OOS %'], uptime_pct: r['Uptime %'],
-        total_service_cost: r['Total Service Cost'], part_cost: r['Part Cost'],
-        labour_cost: r['Labour Cost'], wear_tear_cost: r['Wear and Tear Cost'],
-        wear_tear_part_cost: r['Wear and Tear Part Cost'], wear_tear_labour_cost: r['Wear and Tear Labour Cost'],
-        warranty_cost: r['Warranty Cost'], warranty_part_cost: r['Warranty Part Cost'],
-        warranty_labour_cost: r['Warranty Labour Cost'],
-        total_cost_per_km: r['Total Cost per KM'], repair_frequency: r['Repair Frequency (JC Count)'],
-        rental_revenue: r['Rental Revenue'], total_revenue: r['Total Revenue'],
-      }));
-      isLive = true;
-      document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-live">⚡ Live · Metabase</span>';
-      const monthSel = document.getElementById('f-month');
-      const monthLabel = monthSel.options[monthSel.selectedIndex]?.text || (s + ' → ' + e);
-      document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · ' + monthLabel + ' · live from Metabase';
-    } else {
-      // No dates → Supabase (fast)
-      const res = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=*&order=current_odometer.desc', { headers: SB_HDR });
-      if (!res.ok) throw new Error('Supabase error ' + res.status);
-      allData = await res.json();
-      const sr = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=synced_at&order=synced_at.desc&limit=1', { headers: SB_HDR });
-      const sd = await sr.json();
-      if (sd?.[0]?.synced_at) {
-        const d = new Date(sd[0].synced_at);
-        document.getElementById('sync-ts').textContent = 'Synced: ' + d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
-      }
-      isLive = false;
-      document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase · hourly</span>';
-      document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · all-time · Supabase';
-    }
+    // Always read from Supabase — filter by month column
+    const monthParam = encodeURIComponent(month);
+    const res = await fetch(
+      SB_URL + '/rest/v1/fleet_km_data?select=*&month=eq.' + monthParam + '&order=current_odometer.desc',
+      { headers: SB_HDR }
+    );
+    if (!res.ok) throw new Error('Supabase error ' + res.status);
+    allData = await res.json();
     if (!Array.isArray(allData)) throw new Error('Bad response format');
+
+    // Sync time
+    const sr = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=synced_at&month=eq.' + monthParam + '&order=synced_at.desc&limit=1', { headers: SB_HDR });
+    const sd = await sr.json();
+    if (sd?.[0]?.synced_at) {
+      const d = new Date(sd[0].synced_at);
+      document.getElementById('sync-ts').textContent = 'Synced: ' + d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+    }
+
+    const monthSel = document.getElementById('f-month');
+    const monthLabel = monthSel.options[monthSel.selectedIndex]?.text || month;
+    document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase</span>';
+    document.getElementById('data-info').textContent =
+      allData.length.toLocaleString('en-IN') + ' bikes · ' + monthLabel + ' · Supabase (instant)';
+
     populateHubs(document.getElementById('f-city').value);
     applyFilters();
     document.getElementById('loading').style.display='none';
@@ -317,7 +297,7 @@ function resetAll() {
   document.getElementById('bike-search').value='';
   document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.type-btn[data-type="total"]').classList.add('active');
-  costType='total'; load();
+  costType='total'; load('all_time');
 }
 
 // ── COST ──
@@ -463,7 +443,7 @@ function exportCSV(){
 }
 
 populateMonths();
-load();
+load('all_time');
 </script>
 </body>
 </html>
