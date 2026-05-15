@@ -5,114 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fleet KM Analysis — Bounce</title>
 <style>
-  :root {
-    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3348;
-    --text:#e2e8f0;--muted:#7c85a2;--accent:#6c63ff;
-    --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--blue:#3b82f6;
-    --rev-head:#166534;--cost-head:#1e3a8a;--excl-head:#5b21b6;--wt-head:#7f1d1d;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--bg);color:var(--text);font-family:'DM Sans','Segoe UI',sans-serif;font-size:13px;min-height:100vh}
-
-  .topnav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:32px;height:52px;position:sticky;top:0;z-index:100}
-  .topnav .logo{font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-.3px}
-  .topnav a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .15s;padding:4px 0}
-  .topnav a:hover,.topnav a.active{color:var(--text);border-bottom:2px solid var(--accent)}
-
-  .filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-  .filter-group{display:flex;flex-direction:column;gap:4px}
-  .filter-group label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .filter-group select,.filter-group input[type=date]{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;min-width:130px;cursor:pointer}
-  .filter-group select:focus,.filter-group input[type=date]:focus{outline:none;border-color:var(--accent)}
-  .btn-apply{background:var(--accent);color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s;align-self:flex-end}
-  .btn-apply:hover{opacity:.85}
-  .btn-apply:disabled{opacity:.5;cursor:default}
-
-  .type-btns{display:flex}
-  .type-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px 14px;font-size:12px;cursor:pointer;transition:all .15s}
-  .type-btn:first-child{border-radius:6px 0 0 6px}
-  .type-btn:last-child{border-radius:0 6px 6px 0}
-  .type-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .type-btn:hover:not(.active){background:var(--border);color:var(--text)}
-
-  .btn-reset{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s;align-self:flex-end}
-  .btn-reset:hover{color:var(--text);border-color:var(--text)}
-
-  .sync-info{margin-left:auto;align-self:center;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
-  .sync-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;transition:all .15s}
-  .sync-btn:hover{color:var(--accent);border-color:var(--accent)}
-  .sync-btn:disabled{opacity:.4;cursor:default}
-
-  .main{padding:20px 24px}
-  .page-title{font-size:18px;font-weight:700;margin-bottom:4px}
-  .page-sub{color:var(--muted);font-size:12px;margin-bottom:20px}
-
-  .loading{display:flex;align-items:center;gap:12px;padding:40px;color:var(--muted);font-size:14px}
-  .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  .error-msg{background:#1f0505;border:1px solid var(--red);color:var(--red);padding:12px 16px;border-radius:8px;font-size:13px}
-
-  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .section-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
-  .badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:2px 8px;border-radius:20px}
-
-  .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:28px}
-  table{border-collapse:collapse;width:100%;white-space:nowrap}
-
-  .th-group{text-align:center;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
-  .th-rev{background:var(--rev-head);color:#86efac}
-  .th-cost{background:var(--cost-head);color:#93c5fd}
-  .th-excl{background:var(--excl-head);color:#c4b5fd}
-  .th-wt{background:var(--wt-head);color:#fca5a5}
-  .th-base{background:var(--surface2);color:var(--muted)}
-
-  thead tr:nth-child(2) th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:6px 10px;border-bottom:2px solid var(--border);text-align:right}
-  thead tr:nth-child(2) th:first-child,thead tr:nth-child(2) th:nth-child(2){text-align:left}
-
-  tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-  tbody tr:hover{background:rgba(108,99,255,.05)}
-  tbody tr.total-row{background:var(--surface2);font-weight:700;border-top:2px solid var(--border)}
-
-  td{padding:7px 10px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums;font-size:12px}
-  td:first-child{text-align:left;font-weight:600;background:var(--surface);position:sticky;left:0;z-index:1;border-right:1px solid var(--border);min-width:90px}
-  td:nth-child(2){text-align:right;min-width:60px}
-
-  .z-rev{background:rgba(22,101,52,.15)}
-  .z-cost{background:rgba(30,58,138,.15)}
-  .z-excl{background:rgba(91,33,182,.12)}
-  .z-wt{background:rgba(127,29,29,.12)}
-
-  .detail-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
-  .detail-table thead tr th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:2px solid var(--border);text-align:right;white-space:nowrap}
-  .detail-table thead tr th:nth-child(-n+5){text-align:left}
-  .detail-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-  .detail-table tbody tr:hover{background:rgba(108,99,255,.06)}
-  .detail-table tbody td{padding:7px 10px;font-size:11.5px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .detail-table tbody td:nth-child(-n+5){text-align:left}
-
-  .status-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
-  .s-rfd{background:rgba(34,197,94,.15);color:#22c55e}
-  .s-oos{background:rgba(239,68,68,.15);color:#ef4444}
-  .s-active{background:rgba(59,130,246,.15);color:#60a5fa}
-  .s-other{background:rgba(124,133,162,.15);color:var(--muted)}
-
-  .pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 0 4px;font-size:12px;color:var(--muted)}
-  .page-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px;transition:all .15s}
-  .page-btn:hover{border-color:var(--accent);color:var(--accent)}
-  .page-btn:disabled{opacity:.3;cursor:default}
-
-  .section-controls{display:flex;align-items:center;gap:10px}
-  .search-wrap{position:relative}
-  .search-wrap input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px 6px 32px;border-radius:6px;font-size:12px;width:200px}
-  .search-wrap input:focus{outline:none;border-color:var(--accent)}
-  .search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
-  .export-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
-  .export-btn:hover{color:var(--text);border-color:var(--text)}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3348;--text:#e2e8f0;--muted:#7c85a2;--accent:#6c63ff;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans','Segoe UI',sans-serif;font-size:13px;min-height:100vh}
+.topnav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:32px;height:52px;position:sticky;top:0;z-index:100}
+.topnav .logo{font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-.3px}
+.topnav a{color:var(--muted);text-decoration:none;font-size:13px;padding:4px 0;transition:color .15s}
+.topnav a:hover,.topnav a.active{color:var(--text);border-bottom:2px solid var(--accent)}
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.fg select,.fg input[type=date]{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;min-width:130px;cursor:pointer}
+.fg select:focus,.fg input[type=date]:focus{outline:none;border-color:var(--accent)}
+.divider{width:1px;background:var(--border);align-self:stretch;margin:0 4px}
+.btn-apply{background:var(--accent);color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end}
+.btn-apply:hover{opacity:.85}.btn-apply:disabled{opacity:.4;cursor:default}
+.btn-reset{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;align-self:flex-end}
+.btn-reset:hover{color:var(--text);border-color:var(--text)}
+.type-btns{display:flex}
+.type-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:12px;cursor:pointer;transition:all .15s}
+.type-btn:first-child{border-radius:6px 0 0 6px}.type-btn:last-child{border-radius:0 6px 6px 0}
+.type-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sync-info{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);align-self:flex-end;margin-left:auto}
+.sync-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.sync-btn:hover{color:var(--text);border-color:var(--text)}
+.mode-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:8px}
+.mode-live{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.mode-sb{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+.main{padding:20px 24px}
+.page-title{font-size:18px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.page-sub{color:var(--muted);font-size:12px;margin-bottom:20px}
+.loading{display:flex;align-items:center;gap:12px;padding:40px;color:var(--muted);font-size:14px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{background:#1f0505;border:1px solid var(--red);color:var(--red);padding:12px 16px;border-radius:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:2px 8px;border-radius:20px}
+.section-controls{display:flex;align-items:center;gap:8px}
+.search-wrap{position:relative}
+.search-wrap input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px 6px 30px;border-radius:6px;font-size:12px;width:190px}
+.search-wrap input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px}
+.export-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer}
+.export-btn:hover{color:var(--text);border-color:var(--text)}
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:24px}
+table{border-collapse:collapse;width:100%;white-space:nowrap}
+.th-group{text-align:center;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+.th-base{background:var(--surface2);color:var(--muted)}
+.th-rev{background:#166534;color:#86efac}
+.th-cost{background:#1e3a8a;color:#93c5fd}
+.th-excl{background:#5b21b6;color:#c4b5fd}
+.th-wt{background:#7f1d1d;color:#fca5a5}
+thead tr:nth-child(2) th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:6px 10px;border-bottom:2px solid var(--border);text-align:right}
+thead tr:nth-child(2) th:first-child,thead tr:nth-child(2) th:nth-child(2){text-align:left}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:rgba(108,99,255,.06)}
+tbody tr.total-row{background:var(--surface2);font-weight:700;border-top:2px solid var(--border)}
+td{padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+td:first-child{text-align:left;font-weight:600;background:var(--surface);position:sticky;left:0;z-index:1;border-right:1px solid var(--border);min-width:90px}
+td:nth-child(2){min-width:55px}
+.z-rev{background:rgba(22,101,52,.15)}.z-cost{background:rgba(30,58,138,.15)}
+.z-excl{background:rgba(91,33,182,.12)}.z-wt{background:rgba(127,29,29,.12)}
+/* conditional formatting */
+.hi-green{color:#22c55e;font-weight:600}.mid-yellow{color:#f59e0b}.lo-red{color:#ef4444;font-weight:600}
+.lo-green{color:#22c55e;font-weight:600}.hi-red{color:#ef4444;font-weight:600}
+.bg-green{background:rgba(34,197,94,.12)!important}.bg-yellow{background:rgba(245,158,11,.1)!important}.bg-red{background:rgba(239,68,68,.13)!important}
+.detail-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+.detail-table{border-collapse:collapse;width:100%;white-space:nowrap}
+.detail-table thead tr th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:2px solid var(--border);text-align:right}
+.detail-table thead tr th:first-child,.detail-table thead tr th:nth-child(2),
+.detail-table thead tr th:nth-child(3),.detail-table thead tr th:nth-child(4){text-align:left}
+.detail-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.detail-table tbody tr:hover{background:rgba(108,99,255,.06)}
+.detail-table tbody td{padding:7px 10px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.detail-table tbody td:first-child,.detail-table tbody td:nth-child(2),
+.detail-table tbody td:nth-child(3),.detail-table tbody td:nth-child(4){text-align:left}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.s-rfd{background:rgba(34,197,94,.15);color:#22c55e}.s-oos{background:rgba(239,68,68,.15);color:#ef4444}
+.s-active{background:rgba(59,130,246,.15);color:#60a5fa}.s-other{background:rgba(124,133,162,.15);color:var(--muted)}
+.pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 0 4px;font-size:12px;color:var(--muted)}
+.page-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px}
+.page-btn:hover{border-color:var(--accent);color:var(--accent)}.page-btn:disabled{opacity:.3;cursor:default}
 </style>
 </head>
 <body>
-
 <nav class="topnav">
   <span class="logo">⚡ Bounce Ops</span>
   <a href="dashboard.html">RMC Dashboard</a>
@@ -120,66 +97,58 @@
 </nav>
 
 <div class="filter-bar">
-  <div class="filter-group">
-    <label>City</label>
-    <select id="f-city"><option value="">All Cities</option><option>Bangalore</option><option>Hyderabad</option><option>NCR</option></select>
+  <div class="fg"><label>City</label>
+    <select id="f-city">
+      <option value="">All Cities</option>
+      <option>Bangalore</option><option>Hyderabad</option><option>NCR</option>
+    </select>
   </div>
-  <div class="filter-group">
-    <label>Hub</label>
+  <div class="fg"><label>Hub</label>
     <select id="f-hub"><option value="">All Hubs</option></select>
   </div>
-  <div class="filter-group">
-    <label>Model</label>
-    <select id="f-model"><option value="">All Models</option><option>e1+x</option><option>e1+xPRO</option><option>LowSpeed</option></select>
+  <div class="fg"><label>Model</label>
+    <select id="f-model">
+      <option value="">All Models</option>
+      <option>e1+x</option><option>e1+xPRO</option><option>LowSpeed</option>
+    </select>
   </div>
-  <div class="filter-group">
-    <label>Status</label>
-    <select id="f-status"><option value="">All Status</option><option value="RFD">RFD</option><option value="OOS">OOS</option><option value="Active_rental">Active Rental</option></select>
-  </div>
-  <div class="filter-group">
-    <label>Start Date</label>
-    <input type="date" id="f-start-date">
-  </div>
-  <div class="filter-group">
-    <label>End Date</label>
-    <input type="date" id="f-end-date">
-  </div>
-  <div class="filter-group">
-    <label>Cost Type</label>
+  <div class="divider"></div>
+  <div class="fg"><label>Cost Type</label>
     <div class="type-btns">
       <button class="type-btn active" data-type="total">Part + Labour</button>
       <button class="type-btn" data-type="part">Part Only</button>
       <button class="type-btn" data-type="labour">Labour Only</button>
     </div>
   </div>
-  <button class="btn-apply" onclick="applyDateFilter()">Apply</button>
-  <button class="btn-reset" onclick="resetFilters()">Reset</button>
+  <div class="divider"></div>
+  <div class="fg"><label>Start Date</label><input type="date" id="f-start"></div>
+  <div class="fg"><label>End Date</label><input type="date" id="f-end"></div>
+  <button class="btn-apply" id="btn-apply" onclick="applyDates()">Apply Dates</button>
+  <button class="btn-reset" onclick="resetAll()">Reset</button>
   <div class="sync-info">
-    <span id="sync-ts">–</span>
-    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">🔄 Sync Now</button>
+    <span id="sync-ts"></span>
+    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">🔄 Sync</button>
   </div>
 </div>
 
 <div class="main">
-  <div class="page-title">Fleet KM Analysis</div>
+  <div class="page-title">Fleet KM Analysis <span id="mode-badge"></span></div>
   <div class="page-sub" id="data-info">Loading…</div>
-
-  <div id="loading" class="loading"><div class="spinner"></div> Loading from Supabase…</div>
+  <div id="loading" class="loading"><div class="spinner"></div> <span id="load-msg">Loading from Supabase…</span></div>
   <div id="error" class="error-msg" style="display:none"></div>
-
   <div id="content" style="display:none">
     <div class="section-header">
       <div class="section-title">📊 KM Cohort Summary <span class="badge" id="matrix-badge">–</span></div>
     </div>
     <div class="table-wrap">
-      <table id="matrix-table">
+      <table>
         <thead>
           <tr>
             <th class="th-group th-base" colspan="2">Fleet</th>
-            <th class="th-group th-rev"  colspan="5">Revenue Metrics</th>
+            <th class="th-group th-rev" colspan="5">Revenue Metrics</th>
             <th class="th-group th-cost" colspan="6">Overall Cost</th>
             <th class="th-group th-excl" colspan="5">Excl. Warranty</th>
-            <th class="th-group th-wt"   colspan="5">Wear & Tear</th>
+            <th class="th-group th-wt" colspan="5">Wear &amp; Tear</th>
           </tr>
           <tr>
             <th>KM Bucket</th><th># Bikes</th>
@@ -192,8 +161,7 @@
         <tbody id="matrix-body"></tbody>
       </table>
     </div>
-
-    <div class="section-header" style="margin-top:8px">
+    <div class="section-header" style="margin-top:4px">
       <div class="section-title">🏍️ Bike Level Detail <span class="badge" id="detail-badge">–</span></div>
       <div class="section-controls">
         <div class="search-wrap">
@@ -206,10 +174,12 @@
     <div class="detail-table-wrap">
       <table class="detail-table">
         <thead><tr>
-          <th>Reg No.</th><th>City</th><th>Hub</th><th>Model</th><th>Status</th>
-          <th>KM Bucket</th><th>Curr ODO</th><th>Active Days</th><th>Util%</th><th>OOS%</th><th>Uptime%</th>
-          <th>Total Cost</th><th>Part Cost</th><th>Labour Cost</th><th>W&T Cost</th><th>Warranty Cost</th>
-          <th>Cost/KM</th><th>JC Count</th><th>Rental Rev</th><th>Total Rev</th><th>Cost%Rev</th>
+          <th>Reg No.</th><th>City</th><th>Hub</th><th>Model</th>
+          <th>KM Bucket</th><th>Curr ODO</th><th>Active Days</th>
+          <th>Util%</th><th>OOS%</th><th>Uptime%</th>
+          <th>Total Cost</th><th>Part Cost</th><th>Labour Cost</th>
+          <th>W&amp;T Cost</th><th>Warranty</th><th>Cost/KM</th>
+          <th>JC Count</th><th>Rental Rev</th><th>Total Rev</th><th>Cost%Rev</th>
         </tr></thead>
         <tbody id="detail-body"></tbody>
       </table>
@@ -223,30 +193,33 @@
 </div>
 
 <script>
-const SUPABASE_URL  = 'https://fuslpeyhpmofzijrotkb.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs';
-const SYNC_FN  = `${SUPABASE_URL}/functions/v1/sync-fleet-km`;
-const PROXY_FN = `${SUPABASE_URL}/functions/v1/metabase-proxy`;
-
+const SB_URL  = 'https://fuslpeyhpmofzijrotkb.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs';
+const PROXY   = SB_URL + '/functions/v1/metabase-proxy';
+const SYNC_FN = SB_URL + '/functions/v1/sync-fleet-km';
+const SB_HDR  = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON };
 const ODO_ORDER = ['Undeployed','0 - 5K','5K - 10K','10K - 15K','15K - 20K','20K - 25K','25K - 30K','30K - 35K','35K - 40K','40K+','No Data'];
-const ROWS_PER_PAGE = 50;
-let allData=[], filtered=[], detailData=[], costType='total', currentPage=1;
+const PER_PAGE = 50;
 
-async function fetchData(startDate='', endDate='') {
+let allData=[], filtered=[], detailData=[], costType='total', pg=1, isLive=false;
+
+// ── FETCH ──
+async function load(s='', e='') {
   document.getElementById('loading').style.display='flex';
   document.getElementById('content').style.display='none';
   document.getElementById('error').style.display='none';
+  document.getElementById('load-msg').textContent = s||e ? 'Fetching from Metabase with date filter… (~30s)' : 'Loading from Supabase…';
+
   try {
-    let raw;
-    if (startDate || endDate) {
-      let url = PROXY_FN + '?';
-      if (startDate) url += `start_date=${startDate}&`;
-      if (endDate)   url += `end_date=${endDate}`;
-      document.getElementById('data-info').textContent = 'Fetching from Metabase with date filter… (~30s)';
+    if (s || e) {
+      // Date filter → Metabase proxy (live)
+      let url = PROXY + (s||e ? '?' : '');
+      if (s) url += 'start_date=' + s + '&';
+      if (e) url += 'end_date='   + e;
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-      const mb = await res.json();
-      raw = mb.map(r => ({
+      if (!res.ok) throw new Error('Proxy error ' + res.status);
+      const raw = await res.json();
+      allData = raw.map(r => ({
         bike_id: r['Bike ID'], reg_number: r['Reg_Number'], city: r['City'],
         hub_name: r['Hub Name'], model_name: r['Model Name'], status: r['Status'],
         odometer_bucket: r['Odometer Bucket'], current_odometer: r['Current Odometer'],
@@ -261,186 +234,230 @@ async function fetchData(startDate='', endDate='') {
         total_cost_per_km: r['Total Cost per KM'], repair_frequency: r['Repair Frequency (JC Count)'],
         rental_revenue: r['Rental Revenue'], total_revenue: r['Total Revenue'],
       }));
+      isLive = true;
+      document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-live">⚡ Live · Metabase</span>';
+      document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · ' + (s||'start') + ' → ' + (e||'today') + ' · live from Metabase';
     } else {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/fleet_km_data?select=*&order=current_odometer.desc`,
-        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
-      );
-      if (!res.ok) throw new Error(`Supabase HTTP ${res.status}`);
-      raw = await res.json();
-      const syncRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/fleet_km_data?select=synced_at&order=synced_at.desc&limit=1`,
-        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
-      );
-      const sd = await syncRes.json();
+      // No dates → Supabase (fast)
+      const res = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=*&order=current_odometer.desc', { headers: SB_HDR });
+      if (!res.ok) throw new Error('Supabase error ' + res.status);
+      allData = await res.json();
+      const sr = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=synced_at&order=synced_at.desc&limit=1', { headers: SB_HDR });
+      const sd = await sr.json();
       if (sd?.[0]?.synced_at) {
         const d = new Date(sd[0].synced_at);
-        document.getElementById('sync-ts').textContent = `Last sync: ${d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}`;
+        document.getElementById('sync-ts').textContent = 'Synced: ' + d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
       }
+      isLive = false;
+      document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase · hourly</span>';
+      document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · all-time · Supabase';
     }
-    if (!Array.isArray(raw)) throw new Error('Bad response');
-    allData = raw;
-    populateHubs();
+    if (!Array.isArray(allData)) throw new Error('Bad response format');
+    populateHubs(document.getElementById('f-city').value);
     applyFilters();
     document.getElementById('loading').style.display='none';
     document.getElementById('content').style.display='block';
-    const dateLabel = (startDate||endDate) ? ` · ${startDate||'start'} → ${endDate||'today'} · live from Metabase` : ' · All time · Supabase · hourly refresh';
-    document.getElementById('data-info').textContent = `${allData.length.toLocaleString()} bikes${dateLabel}`;
-  } catch(e) {
+  } catch(err) {
     document.getElementById('loading').style.display='none';
-    const el=document.getElementById('error'); el.style.display='block'; el.textContent=`Failed to load: ${e.message}`;
+    document.getElementById('error').style.display='block';
+    document.getElementById('error').textContent = 'Failed to load: ' + err.message;
   }
 }
 
-function applyDateFilter() {
-  fetchData(document.getElementById('f-start-date').value, document.getElementById('f-end-date').value);
-}
+function applyDates() { load(document.getElementById('f-start').value, document.getElementById('f-end').value); }
 
 async function triggerSync() {
-  const btn=document.getElementById('sync-btn');
+  const btn = document.getElementById('sync-btn');
   btn.disabled=true; btn.textContent='⏳ Syncing…';
   try {
-    const res=await fetch(SYNC_FN,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    const d=await res.json();
-    if(d.success){ btn.textContent='✅ Done!'; setTimeout(()=>{ btn.textContent='🔄 Sync Now'; btn.disabled=false; fetchData(); },1500); }
+    const r = await fetch(SYNC_FN, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    if (d.success) { btn.textContent='✅ Done!'; setTimeout(()=>{ btn.textContent='🔄 Sync'; btn.disabled=false; if(!isLive)load(); },1500); }
     else throw new Error(d.error);
-  } catch(e){ btn.textContent='❌ Failed'; setTimeout(()=>{ btn.textContent='🔄 Sync Now'; btn.disabled=false; },2000); }
+  } catch(e) { btn.textContent='❌ Failed'; setTimeout(()=>{ btn.textContent='🔄 Sync'; btn.disabled=false; },2000); }
 }
 
-function populateHubs(cityFilter='') {
-  const sel=document.getElementById('f-hub'); const cur=sel.value;
+// ── DROPDOWNS — instant, no Apply button ──
+function populateHubs(city) {
+  const sel=document.getElementById('f-hub'), cur=sel.value;
   sel.innerHTML='<option value="">All Hubs</option>';
-  [...new Set(allData.filter(r=>!cityFilter||r.city===cityFilter).map(r=>r.hub_name).filter(Boolean))].sort()
+  [...new Set(allData.filter(r=>!city||r.city===city).map(r=>r.hub_name).filter(Boolean))].sort()
     .forEach(h=>{ const o=document.createElement('option'); o.value=o.textContent=h; if(h===cur)o.selected=true; sel.appendChild(o); });
 }
-
-document.getElementById('f-city').addEventListener('change',function(){ populateHubs(this.value); applyFilters(); });
-['f-hub','f-model','f-status'].forEach(id=>document.getElementById(id).addEventListener('change',applyFilters));
-document.querySelectorAll('.type-btn').forEach(btn=>btn.addEventListener('click',function(){
+document.getElementById('f-city').addEventListener('change', function(){
+  populateHubs(this.value);
+  document.getElementById('f-hub').value='';
+  applyFilters();
+});
+document.getElementById('f-hub').addEventListener('change', applyFilters);
+document.getElementById('f-model').addEventListener('change', applyFilters);
+document.querySelectorAll('.type-btn').forEach(btn=>btn.addEventListener('click', function(){
   document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
   this.classList.add('active'); costType=this.dataset.type; renderAll();
 }));
 
 function applyFilters() {
-  const city=document.getElementById('f-city').value, hub=document.getElementById('f-hub').value,
-        model=document.getElementById('f-model').value, status=document.getElementById('f-status').value;
-  filtered=allData.filter(r=>{
-    if(city && r.city!==city) return false;
-    if(hub  && r.hub_name!==hub) return false;
-    if(model && r.model_name!==model) return false;
-    if(status && r.status!==status) return false;
-    return true;
-  });
-  currentPage=1; filterDetail(); renderAll();
+  const city=document.getElementById('f-city').value,
+        hub=document.getElementById('f-hub').value,
+        model=document.getElementById('f-model').value;
+  filtered=allData.filter(r=>(!city||r.city===city)&&(!hub||r.hub_name===hub)&&(!model||r.model_name===model));
+  pg=1; filterDetail(); renderAll();
 }
-
-function filterDetail(){
+function filterDetail() {
   const q=(document.getElementById('bike-search')?.value||'').toLowerCase();
   detailData=filtered.filter(r=>!q||(r.reg_number||'').toLowerCase().includes(q)||(r.hub_name||'').toLowerCase().includes(q)||(r.city||'').toLowerCase().includes(q));
-  currentPage=1; renderDetail();
+  pg=1; renderDetail();
 }
-
-function resetFilters(){
-  ['f-city','f-hub','f-model','f-status','f-start-date','f-end-date'].forEach(id=>document.getElementById(id).value='');
+function resetAll() {
+  ['f-city','f-hub','f-model','f-start','f-end'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('bike-search').value='';
   document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.type-btn[data-type="total"]').classList.add('active');
-  costType='total'; fetchData();
+  costType='total'; load();
 }
 
-function getCost(r){ if(costType==='part')return+(r.part_cost||0); if(costType==='labour')return+(r.labour_cost||0); return+(r.total_service_cost||0); }
-function getWTCost(r){ if(costType==='part')return+(r.wear_tear_part_cost||0); if(costType==='labour')return+(r.wear_tear_labour_cost||0); return+(r.wear_tear_cost||0); }
-function getExclWarr(r){ const t=getCost(r); let w; if(costType==='part')w=+(r.warranty_part_cost||0); else if(costType==='labour')w=+(r.warranty_labour_cost||0); else w=+(r.warranty_cost||0); return Math.max(0,t-w); }
+// ── COST ──
+const num = v => +(v||0);
+function getCost(r)   { return costType==='part'?num(r.part_cost):costType==='labour'?num(r.labour_cost):num(r.total_service_cost); }
+function getWT(r)     { return costType==='part'?num(r.wear_tear_part_cost):costType==='labour'?num(r.wear_tear_labour_cost):num(r.wear_tear_cost); }
+function getWarr(r)   { return costType==='part'?num(r.warranty_part_cost):costType==='labour'?num(r.warranty_labour_cost):num(r.warranty_cost); }
+function getExcl(r)   { return Math.max(0,getCost(r)-getWarr(r)); }
 
-const fmt=n=>n==null?'–':Number(n).toLocaleString('en-IN',{maximumFractionDigits:0});
-const fmtL=n=>{ if(n==null||isNaN(n))return'–'; n=Number(n); if(n>=1e7)return'₹'+(n/1e7).toFixed(2)+'Cr'; if(n>=1e5)return'₹'+(n/1e5).toFixed(1)+'L'; if(n>=1e3)return'₹'+(n/1e3).toFixed(1)+'K'; return'₹'+fmt(n); };
-const fmtKM=n=>n==null||isNaN(n)?'–':'₹'+Number(n).toFixed(2);
+// ── FORMAT ──
+const fmt  = v => v==null?'–':Number(v).toLocaleString('en-IN',{maximumFractionDigits:0});
+const fmtL = v => { if(v==null||isNaN(v))return'–'; v=Number(v); if(v>=1e7)return'₹'+(v/1e7).toFixed(2)+'Cr'; if(v>=1e5)return'₹'+(v/1e5).toFixed(1)+'L'; if(v>=1e3)return'₹'+(v/1e3).toFixed(1)+'K'; return'₹'+fmt(v); };
+const fmtK = v => v==null||isNaN(+v)?'–':'₹'+Number(v).toFixed(2);
 
-function renderAll(){ renderMatrix(); renderDetail(); }
+// ── CONDITIONAL FORMATTING ──
+// Percentile-based thresholds computed from visible filtered rows
+let TH = {};
+function buildThresholds() {
+  const asc = f => filtered.map(f).filter(v=>v!=null&&!isNaN(v)).sort((a,b)=>a-b);
+  const p = (arr,frac) => arr.length ? arr[Math.floor(arr.length*frac)] : null;
+  const utils = asc(r=>parseFloat(r.utilization_pct));
+  const ooss  = asc(r=>parseFloat(r.oos_pct));
+  const cpkms = asc(r=>num(r.total_cost_per_km));
+  const costs = asc(r=>getCost(r));
+  TH = {
+    util: [p(utils,.33), p(utils,.66)],   // higher=better
+    oos:  [p(ooss,.33),  p(ooss,.66)],    // lower=better
+    cpkm: [p(cpkms,.33), p(cpkms,.66)],   // lower=better
+    cost: [p(costs,.33), p(costs,.66)],   // lower=better
+  };
+}
+// Util / Uptime: green > p66, yellow p33-p66, red < p33
+function cfHigh(v) {
+  const n=parseFloat(v); if(isNaN(n))return '';
+  if(n>=(TH.util[1]??80))return 'hi-green'; if(n>=(TH.util[0]??60))return 'mid-yellow'; return 'lo-red';
+}
+// OOS: green < p33, yellow p33-p66, red > p66
+function cfOOS(v) {
+  const n=parseFloat(v); if(isNaN(n))return '';
+  if(n<=(TH.oos[0]??3))return 'lo-green'; if(n<=(TH.oos[1]??8))return 'mid-yellow'; return 'hi-red';
+}
+// Cost/KM, Cost%Rev, Avg/Bike: green < p33, yellow p33-p66, red > p66
+function cfLow(v, th) {
+  const n=parseFloat(String(v).replace(/[₹%]/g,'')); if(isNaN(n))return '';
+  if(n<=(th[0]??0))return 'lo-green'; if(n<=(th[1]??0))return 'mid-yellow'; return 'hi-red';
+}
+function cfAvgBg(v) {
+  const n=parseFloat(v); if(isNaN(n))return '';
+  if(n<=(TH.cost[0]??0))return 'bg-green'; if(n<=(TH.cost[1]??0))return 'bg-yellow'; return 'bg-red';
+}
 
-function renderMatrix(){
+// ── RENDER ──
+function renderAll() { buildThresholds(); renderMatrix(); renderDetail(); }
+
+function renderMatrix() {
   const groups={};
-  for(const r of filtered){ const b=r.odometer_bucket||'No Data'; if(!groups[b])groups[b]=[]; groups[b].push(r); }
+  filtered.forEach(r=>{ const b=r.odometer_bucket||'No Data'; if(!groups[b])groups[b]=[]; groups[b].push(r); });
   const buckets=ODO_ORDER.filter(b=>groups[b]);
-  document.getElementById('matrix-badge').textContent=`${buckets.length} buckets`;
+  document.getElementById('matrix-badge').textContent=buckets.length+' buckets';
   const tbody=document.getElementById('matrix-body'); tbody.innerHTML='';
+
   const makeRow=(label,rows,isTotal=false)=>{
     const n=rows.length;
-    const totalCost=rows.reduce((s,r)=>s+getCost(r),0), exclWarr=rows.reduce((s,r)=>s+getExclWarr(r),0),
-          wtCost=rows.reduce((s,r)=>s+getWTCost(r),0), totalOdo=rows.reduce((s,r)=>s+(+(r.filtered_odometer||0)),0),
-          totalRevRent=rows.reduce((s,r)=>s+(+(r.rental_revenue||0)),0), totalRevAll=rows.reduce((s,r)=>s+(+(r.total_revenue||0)),0),
-          totalLife=rows.reduce((s,r)=>s+(+(r.total_life_days||0)),0), activeDays=rows.reduce((s,r)=>s+(+(r.active_days||0)),0),
-          totalJC=rows.reduce((s,r)=>s+(+(r.repair_frequency||0)),0);
-    const utilPct=totalLife?(activeDays/totalLife*100).toFixed(1)+'%':'–';
-    const uptVals=rows.map(r=>parseFloat(r.uptime_pct||'0')).filter(v=>!isNaN(v));
-    const avgUpt=uptVals.length?(uptVals.reduce((a,b)=>a+b,0)/uptVals.length).toFixed(1)+'%':'–';
-    const revPerLife=totalLife?Math.round(totalRevAll/totalLife*30):null;
-    const revPerActive=activeDays?Math.round(totalRevAll/activeDays*30):null;
-    const costPctRev=totalRevAll?(totalCost/totalRevAll*100).toFixed(1)+'%':'–';
-    const exclPctRev=totalRevAll?(exclWarr/totalRevAll*100).toFixed(1)+'%':'–';
-    const wtPctRev=totalRevAll?(wtCost/totalRevAll*100).toFixed(1)+'%':'–';
-    const jcPerBike=n?totalJC/n:0, costPerKM=totalOdo?totalCost/totalOdo:null,
-          exclPerKM=totalOdo?exclWarr/totalOdo:null, wtPerKM=totalOdo?wtCost/totalOdo:null;
+    const tCost=rows.reduce((s,r)=>s+getCost(r),0), excl=rows.reduce((s,r)=>s+getExcl(r),0), wt=rows.reduce((s,r)=>s+getWT(r),0);
+    const odo=rows.reduce((s,r)=>s+num(r.filtered_odometer),0), revR=rows.reduce((s,r)=>s+num(r.rental_revenue),0), revA=rows.reduce((s,r)=>s+num(r.total_revenue),0);
+    const life=rows.reduce((s,r)=>s+num(r.total_life_days),0), active=rows.reduce((s,r)=>s+num(r.active_days),0), jc=rows.reduce((s,r)=>s+num(r.repair_frequency),0);
+    const utilP=life?(active/life*100).toFixed(1)+'%':'–';
+    const uptArr=rows.map(r=>parseFloat(r.uptime_pct||0)).filter(v=>!isNaN(v));
+    const avgUpt=uptArr.length?(uptArr.reduce((a,b)=>a+b,0)/uptArr.length).toFixed(1)+'%':'–';
+    const rl30=life?Math.round(revA/life*30):null, ra30=active?Math.round(revA/active*30):null;
+    const cpRev=revA?(tCost/revA*100).toFixed(1)+'%':'–', exRev=revA?(excl/revA*100).toFixed(1)+'%':'–', wtRev=revA?(wt/revA*100).toFixed(1)+'%':'–';
+    const jcPB=n?(jc/n).toFixed(2):'0.00', avgB=n?Math.round(tCost/n):0, exAvg=n?Math.round(excl/n):0, wtAvg=n?Math.round(wt/n):0;
+    const cpkm=odo?fmtK(tCost/odo):'–', exkm=odo?fmtK(excl/odo):'–', wtkm=odo?fmtK(wt/odo):'–';
+    const rupee=v=>'₹'+Number(v).toLocaleString('en-IN');
     const tr=document.createElement('tr'); if(isTotal)tr.className='total-row';
-    tr.innerHTML=`<td>${label}</td><td>${fmt(n)}</td>
-      <td class="z-rev">${fmtL(totalRevRent)}</td><td class="z-rev">${fmtL(totalRevAll)}</td>
-      <td class="z-rev">${revPerLife?'₹'+revPerLife.toLocaleString('en-IN'):'–'}</td>
-      <td class="z-rev">${revPerActive?'₹'+revPerActive.toLocaleString('en-IN'):'–'}</td><td class="z-rev">${utilPct}</td>
-      <td class="z-cost">${fmtL(totalCost)}</td><td class="z-cost">${costPerKM!=null?fmtKM(costPerKM):'–'}</td>
-      <td class="z-cost">${jcPerBike.toFixed(2)}</td><td class="z-cost">₹${Math.round(n?totalCost/n:0).toLocaleString('en-IN')}</td>
-      <td class="z-cost">${avgUpt}</td><td class="z-cost">${costPctRev}</td>
-      <td class="z-excl">${fmtL(exclWarr)}</td><td class="z-excl">${exclPerKM!=null?fmtKM(exclPerKM):'–'}</td>
-      <td class="z-excl">${jcPerBike.toFixed(2)}</td><td class="z-excl">₹${Math.round(n?exclWarr/n:0).toLocaleString('en-IN')}</td><td class="z-excl">${exclPctRev}</td>
-      <td class="z-wt">${fmtL(wtCost)}</td><td class="z-wt">${wtPerKM!=null?fmtKM(wtPerKM):'–'}</td>
-      <td class="z-wt">${jcPerBike.toFixed(2)}</td><td class="z-wt">₹${Math.round(n?wtCost/n:0).toLocaleString('en-IN')}</td><td class="z-wt">${wtPctRev}</td>`;
+    tr.innerHTML=`
+      <td>${label}</td><td>${fmt(n)}</td>
+      <td class="z-rev">${fmtL(revR)}</td><td class="z-rev">${fmtL(revA)}</td>
+      <td class="z-rev">${rl30?rupee(rl30):'–'}</td><td class="z-rev">${ra30?rupee(ra30):'–'}</td>
+      <td class="z-rev ${cfHigh(parseFloat(utilP))}">${utilP}</td>
+      <td class="z-cost">${fmtL(tCost)}</td>
+      <td class="z-cost ${cfLow(cpkm,TH.cpkm)}">${cpkm}</td>
+      <td class="z-cost">${jcPB}</td>
+      <td class="z-cost ${cfAvgBg(avgB)}">₹${fmt(avgB)}</td>
+      <td class="z-cost ${cfHigh(parseFloat(avgUpt))}">${avgUpt}</td>
+      <td class="z-cost ${cfLow(cpRev,[4,8])}">${cpRev}</td>
+      <td class="z-excl">${fmtL(excl)}</td>
+      <td class="z-excl ${cfLow(exkm,TH.cpkm)}">${exkm}</td>
+      <td class="z-excl">${jcPB}</td>
+      <td class="z-excl ${cfAvgBg(exAvg)}">₹${fmt(exAvg)}</td>
+      <td class="z-excl ${cfLow(exRev,[4,8])}">${exRev}</td>
+      <td class="z-wt">${fmtL(wt)}</td>
+      <td class="z-wt ${cfLow(wtkm,TH.cpkm)}">${wtkm}</td>
+      <td class="z-wt">${jcPB}</td>
+      <td class="z-wt ${cfAvgBg(wtAvg)}">₹${fmt(wtAvg)}</td>
+      <td class="z-wt ${cfLow(wtRev,[4,8])}">${wtRev}</td>`;
     tbody.appendChild(tr);
   };
   buckets.forEach(b=>makeRow(b,groups[b]));
-  if(filtered.length)makeRow('Overall',filtered,true);
+  if(filtered.length) makeRow('Overall',filtered,true);
 }
 
-function renderDetail(){
-  const total=detailData.length, pages=Math.max(1,Math.ceil(total/ROWS_PER_PAGE));
-  currentPage=Math.min(currentPage,pages);
-  const start=(currentPage-1)*ROWS_PER_PAGE, slice=detailData.slice(start,start+ROWS_PER_PAGE);
-  document.getElementById('detail-badge').textContent=`${total.toLocaleString()} bikes`;
-  document.getElementById('page-info').textContent=`Page ${currentPage} of ${pages}`;
-  document.getElementById('btn-prev').disabled=currentPage<=1;
-  document.getElementById('btn-next').disabled=currentPage>=pages;
+function renderDetail() {
+  const total=detailData.length, pages=Math.max(1,Math.ceil(total/PER_PAGE));
+  pg=Math.min(pg,pages);
+  const slice=detailData.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
+  document.getElementById('detail-badge').textContent=total.toLocaleString('en-IN')+' bikes';
+  document.getElementById('page-info').textContent='Page '+pg+' of '+pages;
+  document.getElementById('btn-prev').disabled=pg<=1;
+  document.getElementById('btn-next').disabled=pg>=pages;
   const tbody=document.getElementById('detail-body'); tbody.innerHTML='';
   for(const r of slice){
-    const cost=getCost(r), rev=+(r.total_revenue||0), costPct=rev?(cost/rev*100).toFixed(1)+'%':'–';
+    const cost=getCost(r), rev=num(r.total_revenue), cpct=rev?(cost/rev*100).toFixed(1)+'%':'–';
+    const cpkm=r.total_cost_per_km!=null?'₹'+parseFloat(r.total_cost_per_km).toFixed(2):'–';
     const sc={RFD:'s-rfd',OOS:'s-oos',Active_rental:'s-active'}[r.status]||'s-other';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.reg_number||'–'}</td><td>${r.city||'–'}</td><td>${r.hub_name||'–'}</td>
-      <td>${r.model_name||'–'}</td><td><span class="status-pill ${sc}">${r.status||'–'}</span></td>
+    tr.innerHTML=`
+      <td>${r.reg_number||'–'}</td><td>${r.city||'–'}</td><td>${r.hub_name||'–'}</td><td>${r.model_name||'–'}</td>
       <td>${r.odometer_bucket||'–'}</td><td>${fmt(r.current_odometer)}</td>
       <td>${r.active_days!=null?parseFloat(r.active_days).toFixed(1):'–'}</td>
-      <td>${r.utilization_pct||'–'}</td><td>${r.oos_pct||'–'}</td><td>${r.uptime_pct||'–'}</td>
-      <td>₹${fmt(cost)}</td><td>₹${fmt(+(r.part_cost||0))}</td><td>₹${fmt(+(r.labour_cost||0))}</td>
-      <td>₹${fmt(+(r.wear_tear_cost||0))}</td><td>₹${fmt(+(r.warranty_cost||0))}</td>
-      <td>${r.total_cost_per_km!=null?'₹'+parseFloat(r.total_cost_per_km).toFixed(2):'–'}</td>
-      <td>${fmt(r.repair_frequency)}</td><td>₹${fmt(+(r.rental_revenue||0))}</td>
-      <td>₹${fmt(+(r.total_revenue||0))}</td><td>${costPct}</td>`;
+      <td class="${cfHigh(r.utilization_pct)}">${r.utilization_pct||'–'}</td>
+      <td class="${cfOOS(r.oos_pct)}">${r.oos_pct||'–'}</td>
+      <td class="${cfHigh(r.uptime_pct)}">${r.uptime_pct||'–'}</td>
+      <td>₹${fmt(cost)}</td><td>₹${fmt(num(r.part_cost))}</td><td>₹${fmt(num(r.labour_cost))}</td>
+      <td>₹${fmt(num(r.wear_tear_cost))}</td><td>₹${fmt(num(r.warranty_cost))}</td>
+      <td class="${cfLow(cpkm,TH.cpkm)}">${cpkm}</td>
+      <td>${fmt(r.repair_frequency)}</td>
+      <td>₹${fmt(num(r.rental_revenue))}</td><td>₹${fmt(num(r.total_revenue))}</td>
+      <td class="${cfLow(cpct,[4,8])}">${cpct}</td>`;
     tbody.appendChild(tr);
   }
 }
 
-function changePage(dir){ currentPage+=dir; renderDetail(); window.scrollTo({top:document.querySelector('.detail-table-wrap').offsetTop-20,behavior:'smooth'}); }
+function changePage(dir){ pg+=dir; renderDetail(); window.scrollTo({top:document.querySelector('.detail-table-wrap').offsetTop-20,behavior:'smooth'}); }
 
 function exportCSV(){
-  const cols=['reg_number','city','hub_name','model_name','status','odometer_bucket',
-    'current_odometer','active_days','utilization_pct','oos_pct','uptime_pct',
-    'total_service_cost','part_cost','labour_cost','wear_tear_cost','warranty_cost',
-    'total_cost_per_km','repair_frequency','rental_revenue','total_revenue'];
-  const header=cols.join(',');
-  const rows=detailData.map(r=>cols.map(c=>{ const v=r[c]; if(v==null)return''; const s=String(v); return s.includes(',')?`"${s}"`:s; }).join(','));
+  const cols=['reg_number','city','hub_name','model_name','odometer_bucket','current_odometer','active_days','utilization_pct','oos_pct','uptime_pct','total_service_cost','part_cost','labour_cost','wear_tear_cost','warranty_cost','total_cost_per_km','repair_frequency','rental_revenue','total_revenue'];
+  const rows=detailData.map(r=>cols.map(c=>{ const v=r[c]; if(v==null)return''; const s=String(v); return s.includes(',')?'"'+s+'"':s; }).join(','));
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([[header,...rows].join('\n')],{type:'text/csv'}));
-  a.download=`fleet_km_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+  a.href=URL.createObjectURL(new Blob([[cols.join(','),...rows].join('\n')],{type:'text/csv'}));
+  a.download='fleet_km_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 }
 
-fetchData();
+load();
 </script>
 </body>
 </html>
