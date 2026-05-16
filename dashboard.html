@@ -1,264 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>RMC Dashboard · Bounce Daily</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RMC Cost Dashboard — Bounce Ops</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+/* ── BOUNCE BRAND ── */
 :root{
-  --bg:#f4f6f9;--sidebar:#131316;--card:#ffffff;
-  --border:#e5e9f0;--border2:#d0d8e8;
-  --blue:#2563eb;--blue2:#1d4ed8;--blue-light:#eff6ff;
-  --red:#f53b3b;--red2:#d92d2d;--green:#16a34a;--amber:#d97706;--purple:#7c3aed;--teal:#0891b2;
-  --text:#0f172a;--text2:#475569;--muted:#94a3b8;
-  --sb-text:#94a3b8;--sb-text2:#e2e8f0;
-  --font:'Segoe UI',Arial,sans-serif;--mono:'Courier New',monospace;
+  --bg:#f4f6f9; --card:#fff; --border:#e5e9f0; --border2:#d0d8e8;
+  --text:#0f172a; --text2:#475569; --muted:#94a3b8;
+  --red:#f53b3b; --red2:#d92d2d;
+  --blue:#2563eb; --blue2:#1d4ed8; --blue-light:#eff6ff;
+  --green:#16a34a; --amber:#d97706; --purple:#7c3aed; --teal:#0891b2;
+  --font:'Segoe UI',Arial,sans-serif; --mono:'Courier New',monospace;
   --sw:210px;
 }
-
-/* ── BOUNCE BRAND ── */
-:root {
-  --bounce-red: #f53b3b;
-  --bounce-red-h: #d92d2d;
-  --bounce-dark: #18181b;
-  --bounce-surface: #131316;
-  --bounce-surface2: #212127;
-  --bounce-border: #2a2a33;
-  --bounce-muted: #bdbdbd;
-  --bounce-muted2: #7a7a8a;
-  --font: 'Segoe UI', Arial, sans-serif;
-  --sw: 210px;
-}
-
-/* SIDEBAR */
-.sidebar {
-  width: var(--sw);
-  flex-shrink: 0;
-  background: var(--bounce-surface);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  border-right: 1px solid var(--bounce-border);
-  transition: width .22s cubic-bezier(.4,0,.2,1);
-  overflow: hidden;
-}
-.sidebar.collapsed { width: 54px; }
-
-/* Brand */
-.sb-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--bounce-border);
-  min-height: 56px;
-  white-space: nowrap;
-}
-.sb-logo-img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
-.sb-logo-fallback {
-  width: 30px; height: 30px; border-radius: 8px;
-  background: var(--bounce-red); display: flex; align-items: center;
-  justify-content: center; font-size: 16px; flex-shrink: 0;
-}
-.sb-name { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
-.sb-name span { color: var(--bounce-red); }
-.sb-text { transition: opacity .15s; }
-.sidebar.collapsed .sb-text { opacity: 0; pointer-events: none; }
-
-/* Toggle */
-.sb-toggle {
-  position: absolute;
-  right: -12px;
-  top: 18px;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: var(--bounce-surface2);
-  border: 1px solid var(--bounce-border);
-  color: var(--bounce-muted);
-  font-size: 12px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
-  z-index: 10;
-  flex-shrink: 0;
-}
-.sb-toggle:hover { background: var(--bounce-red); color: #fff; border-color: var(--bounce-red); }
-.sidebar.collapsed .sb-toggle { right: -13px; }
-
-/* Nav section */
-.sb-sec {
-  padding: 16px 14px 6px;
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--bounce-muted2);
-  font-weight: 700;
-  white-space: nowrap;
-  transition: opacity .15s;
-}
-.sidebar.collapsed .sb-sec { opacity: 0; }
-
-/* Nav items */
-.sb-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 14px;
-  margin: 1px 8px;
-  border-radius: 7px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bounce-muted);
-  cursor: pointer;
-  transition: all .15s;
-  text-decoration: none;
-  white-space: nowrap;
-  position: relative;
-}
-.sb-item:hover { background: rgba(255,255,255,.06); color: #fff; }
-.sb-item.active { background: rgba(245,59,59,.15); color: var(--bounce-red); }
-.sb-item.active .sb-icon { color: var(--bounce-red); }
-.sb-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
-.sb-label { transition: opacity .15s; }
-.sidebar.collapsed .sb-label { opacity: 0; }
-
-/* Tooltip on collapsed */
-.sidebar.collapsed .sb-item:hover::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 50px;
-  background: var(--bounce-surface2);
-  color: #fff;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  border: 1px solid var(--bounce-border);
-  pointer-events: none;
-  z-index: 100;
-}
-
-.sb-spacer { flex: 1; }
-
-/* Footer */
-.sb-foot {
-  padding: 12px 14px;
-  border-top: 1px solid var(--bounce-border);
-  font-size: 10px;
-  color: var(--bounce-muted2);
-  font-family: monospace;
-  white-space: nowrap;
-  transition: opacity .15s;
-}
-.sidebar.collapsed .sb-foot { opacity: 0; pointer-events: none; }
-.sb-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #0cea56;
-  display: inline-block; margin-right: 5px;
-  vertical-align: middle;
-  animation: sbpulse 2s infinite;
-}
-@keyframes sbpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
+*{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;display:flex}
 
-/* SIDEBAR */
-/* sidebar styles moved to shared sb-css */
+/* ── SHARED SIDEBAR ── */
+.sidebar{width:var(--sw);flex-shrink:0;background:#131316;display:flex;flex-direction:column;height:100vh;position:sticky;top:0;border-right:1px solid #2a2a33;transition:width .22s cubic-bezier(.4,0,.2,1);overflow:hidden}
+.sidebar.collapsed{width:54px}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:14px 12px;border-bottom:1px solid #2a2a33;min-height:56px;white-space:nowrap}
+.sb-logo-img{width:30px;height:30px;object-fit:contain;flex-shrink:0;border-radius:6px}
+.sb-logo-fallback{width:30px;height:30px;border-radius:8px;background:#f53b3b;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.sb-name{font-size:14px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.sb-name span{color:#f53b3b}
+.sb-text{transition:opacity .15s}
+.sidebar.collapsed .sb-text{opacity:0;pointer-events:none}
+.sb-toggle{position:absolute;right:-12px;top:18px;width:24px;height:24px;border-radius:50%;background:#1e1e24;border:1px solid #2a2a33;color:#bdbdbd;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:10;flex-shrink:0}
+.sb-toggle:hover{background:#f53b3b;color:#fff;border-color:#f53b3b}
+.sb-sec{padding:16px 14px 6px;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:#7a7a8a;font-weight:700;white-space:nowrap;transition:opacity .15s}
+.sidebar.collapsed .sb-sec{opacity:0}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;margin:1px 8px;border-radius:7px;font-size:12.5px;font-weight:500;color:#bdbdbd;cursor:pointer;transition:all .15s;text-decoration:none;white-space:nowrap;position:relative}
+.sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-item.active{background:rgba(245,59,59,.15);color:#f53b3b}
+.sb-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sb-label{transition:opacity .15s}
+.sidebar.collapsed .sb-label{opacity:0}
+.sidebar.collapsed .sb-item:hover::after{content:attr(data-tip);position:absolute;left:50px;background:#1e1e24;color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;white-space:nowrap;border:1px solid #2a2a33;pointer-events:none;z-index:100}
+.sb-spacer{flex:1}
+.sb-foot{padding:12px 14px;border-top:1px solid #2a2a33;font-size:10px;color:#7a7a8a;font-family:monospace;white-space:nowrap;transition:opacity .15s}
+.sidebar.collapsed .sb-foot{opacity:0;pointer-events:none}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:#0cea56;display:inline-block;margin-right:5px;vertical-align:middle;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:margin-left .22s}
+/* ── MAIN LAYOUT ── */
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.content{flex:1;overflow-y:auto;background:var(--bg)}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* TOPBAR */
-.topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 22px;height:52px;background:#ffffff;border-bottom:1px solid var(--border)}
-.pg-title{font-size:15px;font-weight:600;color:var(--text)}
-.pg-sub{font-size:11px;color:var(--text2)}
-.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.tb-pill{font-size:11px;color:var(--text2);background:var(--bg);border:1px solid var(--border2);border-radius:20px;padding:3px 12px;font-family:var(--mono)}
-.tb-pill.live{border-color:rgba(22,163,74,.3);color:var(--green);background:#f0fdf4}
+/* ── HERO HEADER (like FleetPro) ── */
+.hero{
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#2563eb 100%);
+  padding:28px 28px 48px;
+  position:relative;overflow:hidden;
+}
+.hero::after{
+  content:'';position:absolute;bottom:-30px;left:0;right:0;height:60px;
+  background:var(--bg);border-radius:50% 50% 0 0 / 30px 30px 0 0;
+}
+.hero-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.hero-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.4px}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.6);margin-top:2px}
+.hero-badges{display:flex;gap:8px;align-items:center}
+.hbadge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;backdrop-filter:blur(4px)}
+.hbadge.live{background:rgba(6,234,86,.15);border-color:rgba(6,234,86,.3);color:#4ade80}
 
-/* FILTERS */
-.filters{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 22px;background:#ffffff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+/* ── FILTERS ── */
+.filters{
+  background:#fff;border-bottom:1px solid var(--border);
+  padding:8px 28px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
 .fl{display:flex;align-items:center;gap:5px}
-.fl-l{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);white-space:nowrap;font-weight:600}
-select,input[type=date]{background:#ffffff;border:1px solid var(--border2);color:var(--text);border-radius:6px;padding:5px 10px;font-size:11.5px;font-family:var(--font);outline:none;transition:border-color .15s,box-shadow .15s;cursor:pointer}
-select{padding-right:22px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%2394a3b8' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
-select:focus,input[type=date]:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-.fsep{width:1px;height:20px;background:var(--border)}
-.clear-btn{background:none;border:1px solid var(--border2);color:var(--text2);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;transition:all .15s}
+.fl-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600;white-space:nowrap}
+select,input[type=date]{background:#fff;border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:var(--font);cursor:pointer;transition:border .15s}
+select:focus,input[type=date]:focus{outline:none;border-color:var(--red)}
+.fsep{width:1px;height:20px;background:var(--border);margin:0 4px}
+.clear-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s;margin-left:4px}
 .clear-btn:hover{border-color:var(--red);color:var(--red)}
 
-/* CONTENT */
-.content{flex:1;overflow-y:auto;padding:16px 22px;display:flex;flex-direction:column;gap:14px;background:var(--bg)}
-.content::-webkit-scrollbar{width:4px}.content::-webkit-scrollbar-track{background:var(--bg)}.content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.sh{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.sh::after{content:'';flex:1;height:1px;background:var(--border)}
+/* ── INNER CONTENT ── */
+.inner{padding:0 28px 28px}
 
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.kpi{background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;transition:box-shadow .15s,transform .15s}
-.kpi:hover{box-shadow:0 4px 16px rgba(0,0,0,.3);transform:translateY(-1px)}
-.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600}
-.kpi-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px}
-.kpi-val{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--text);margin-bottom:3px}
-.kpi-sub{font-size:10px;color:var(--muted)}
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:-24px 28px 20px;position:relative;z-index:1}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:box-shadow .15s,transform .15s}
+.kpi:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-2px)}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.kpi-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kpi-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.kpi-val{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--muted)}
 .kpi-bar{height:3px;border-radius:2px;margin-top:10px}
 
-/* CHARTS */
-.g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
-.cbox{background:#ffffff;border:1px solid var(--border);border-radius:8px;padding:16px;transition:box-shadow .15s}
-.cbox:hover{box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.ct{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600;margin-bottom:14px}
+/* ── SECTION ── */
+.sh{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-top:4px}
+.sh::after{content:'';flex:1;height:1px;background:var(--border)}
 
-/* TABLE */
-.tbl-box{background:#ffffff;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+/* ── CHART GRID ── */
+.g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.cbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .15s}
+.cbox:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.ct{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+
+/* ── TABLES ── */
+.tbl-box{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:16px}
 .tbl-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafbfd}
-.thl{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);font-weight:600}
-.tw{overflow-x:auto;max-height:260px;overflow-y:auto}
-.tw::-webkit-scrollbar{width:3px;height:3px}.tw::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-table{width:100%;border-collapse:collapse;font-size:12px}
-thead th{padding:8px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfd;position:sticky;top:0;white-space:nowrap;font-weight:600}
-tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-tbody tr:last-child{border-bottom:none}
+.thl{font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em}
+.tw{overflow-x:auto;max-height:280px;overflow-y:auto}
+.tw::-webkit-scrollbar{width:3px;height:3px}
+.tw::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+table{border-collapse:collapse;width:100%;white-space:nowrap;font-size:12px}
+thead th{padding:8px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-bottom:1px solid var(--border);background:#fafbfd;position:sticky;top:0;font-weight:600}
+tbody td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text)}
 tbody tr:hover{background:#f8faff}
-tbody td{padding:8px 14px;white-space:nowrap;color:var(--text)}
-.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:500}
-.t-r{background:#fef2f2;color:var(--red)}.t-b{background:#eff6ff;color:var(--blue)}.t-g{background:#f0fdf4;color:var(--green)}
-.t-a{background:#fffbeb;color:var(--amber)}.t-p{background:#faf5ff;color:var(--purple)}
+tbody tr:last-child td{border-bottom:none}
+.tag{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.t-r{background:#fef2f2;color:var(--red)}
+.t-b{background:#eff6ff;color:var(--blue)}
+.t-g{background:#f0fdf4;color:var(--green)}
+.t-a{background:#fffbeb;color:var(--amber)}
+.t-p{background:#faf5ff;color:var(--purple)}
 .bw{display:flex;align-items:center;gap:8px}
 .bb{width:60px;height:4px;background:var(--border);border-radius:2px;flex-shrink:0}
-.bf{height:4px;border-radius:2px;background:var(--blue)}
+.bf{height:100%;background:var(--blue);border-radius:2px;transition:width .3s}
 .loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:11px;padding:32px;font-family:var(--mono)}
-.spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin2 .7s linear infinite}
 </style>
 </head>
 <body>
 
-
+<!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
-  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">‹</button>
+  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()">‹</button>
   <div class="sb-brand">
     <img class="sb-logo-img" src="https://bouncedaily.in/logo  (1).png"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="Bounce">
     <div class="sb-logo-fallback" style="display:none">⚡</div>
-    <div class="sb-text">
-      <div class="sb-name">Bounce <span>Ops</span></div>
-    </div>
+    <div class="sb-text"><div class="sb-name">Bounce <span>Ops</span></div></div>
   </div>
   <div class="sb-sec">Analytics</div>
   <a class="sb-item active" href="dashboard.html" data-tip="RMC Dashboard">
     <span class="sb-icon">📊</span><span class="sb-label">RMC Dashboard</span>
   </a>
-  <a class="sb-item " href="fleet-km.html" data-tip="Fleet KM Analysis">
+  <a class="sb-item" href="fleet-km.html" data-tip="Fleet KM Analysis">
     <span class="sb-icon">🏍️</span><span class="sb-label">Fleet KM Analysis</span>
   </a>
   <div class="sb-spacer"></div>
@@ -268,97 +161,107 @@ tbody td{padding:8px 14px;white-space:nowrap;color:var(--text)}
   </div>
 </div>
 
-
+<!-- MAIN -->
 <div class="main">
-  <div class="topbar">
-    <div><div class="pg-title">RMC Cost Dashboard</div><div class="pg-sub">Repair & Maintenance Cost Analysis</div></div>
-    <div class="tb-right">
-      <span class="tb-pill" id="row-badge">—</span>
-      <span class="tb-pill live" id="date-badge">Jan 1 – May 13</span>
-    </div>
-  </div>
-
-  <!-- FILTERS — auto-apply on change -->
-  <div class="filters">
-    <div class="fl"><span class="fl-l">From</span><input type="date" id="f-start"/></div>
-    <div class="fl"><span class="fl-l">To</span><input type="date" id="f-end"/></div>
-    <div class="fsep"></div>
-    <div class="fl"><span class="fl-l">City</span>
-      <select id="f-city"><option value="">All Cities</option><option>Bangalore</option><option>NCR</option><option>Hyderabad</option></select>
-    </div>
-    <div class="fl"><span class="fl-l">Model</span>
-      <select id="f-model"><option value="">All Models</option><option>e1+x</option><option>e1+xPRO</option><option>LowSpeed</option></select>
-    </div>
-    <div class="fl"><span class="fl-l">Submission</span>
-      <select id="f-sub"><option value="">All</option><option>Recovery</option><option>Running Repair</option><option>Rider Submission</option><option>Bike Exchange</option></select>
-    </div>
-    <div class="fl"><span class="fl-l">Commodity</span>
-      <select id="f-com"><option value="">All</option><option>Paid MISC</option><option>Wear &amp; Tear</option><option>Accidental Repair</option><option>Warranty</option></select>
-    </div>
-    <div class="fl"><span class="fl-l">Type</span>
-      <select id="f-line"><option value="">All</option><option value="Part">Part</option><option value="Labour">Labour</option></select>
-    </div>
-    <button class="clear-btn" onclick="clearF()">✕ Clear</button>
-  </div>
-
   <div class="content">
 
-    <!-- KPIs -->
-    <div>
-      <div class="sh">Cost Overview</div>
-      <div class="kpi-grid" id="kpis"><div class="loading" style="grid-column:1/-1"><div class="spin"></div>Loading...</div></div>
-    </div>
-
-    <!-- Trends -->
-    <div>
-      <div class="sh">Trends & Mix</div>
-      <div class="g3">
-        <div class="cbox"><div class="ct">Daily Cost + Avg/JC</div><canvas id="dailyChart" height="130"></canvas></div>
-        <div class="cbox"><div class="ct">By Submission Type</div><canvas id="subChart" height="130"></canvas></div>
-        <div class="cbox"><div class="ct">By Commodity</div><canvas id="comChart" height="130"></canvas></div>
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="hero-title">RMC Cost Dashboard</div>
+          <div class="hero-sub">Repair &amp; Maintenance Cost Analysis</div>
+        </div>
+        <div class="hero-badges">
+          <span class="hbadge" id="row-badge">— JCs</span>
+          <span class="hbadge live" id="date-badge">Loading…</span>
+        </div>
       </div>
     </div>
 
-    <!-- City + Hub -->
-    <div>
-      <div class="sh">City & Hub</div>
-      <div class="g2">
-        <div class="cbox"><div class="ct">Avg Cost / JC by City</div><canvas id="cityChart" height="110"></canvas></div>
-        <div class="cbox"><div class="ct">Top 10 Hubs by Cost</div><canvas id="hubChart" height="110"></canvas></div>
-      </div>
+    <!-- KPI CARDS (overlap hero) -->
+    <div class="kpi-grid" id="kpis">
+      <div class="loading" style="grid-column:1/-1"><div class="spin"></div>Loading...</div>
     </div>
 
-    <!-- Hub table -->
-    <div>
-      <div class="sh">Hub Detail</div>
-      <div class="tbl-box">
-        <div class="tbl-hdr"><span class="thl">Hub-wise RMC Breakdown</span><span id="hub-count" style="font-size:11px;color:var(--muted);font-family:var(--mono)"></span></div>
-        <div class="tw" id="hub-tbl"><div class="loading"><div class="spin"></div>Loading...</div></div>
+    <!-- FILTERS -->
+    <div class="filters">
+      <div class="fl"><span class="fl-l">From</span><input type="date" id="f-start"/></div>
+      <div class="fl"><span class="fl-l">To</span><input type="date" id="f-end"/></div>
+      <div class="fsep"></div>
+      <div class="fl"><span class="fl-l">City</span>
+        <select id="f-city"><option value="">All Cities</option><option>Bangalore</option><option>NCR</option><option>Hyderabad</option></select>
       </div>
+      <div class="fl"><span class="fl-l">Model</span>
+        <select id="f-model"><option value="">All Models</option><option>e1+x</option><option>e1+xPRO</option><option>LowSpeed</option></select>
+      </div>
+      <div class="fl"><span class="fl-l">Submission</span>
+        <select id="f-sub"><option value="">All</option><option>Recovery</option><option>Running Repair</option><option>Rider Submission</option><option>Bike Exchange</option></select>
+      </div>
+      <div class="fl"><span class="fl-l">Commodity</span>
+        <select id="f-com"><option value="">All</option><option>Paid MISC</option><option>Wear &amp; Tear</option><option>Accidental Repair</option><option>Warranty</option></select>
+      </div>
+      <div class="fl"><span class="fl-l">Type</span>
+        <select id="f-line"><option value="">All</option><option value="Part">Part</option><option value="Labour">Labour</option></select>
+      </div>
+      <button class="clear-btn" onclick="clearF()">✕ Clear</button>
     </div>
 
-    <!-- Model split -->
-    <div>
-      <div class="sh">Model Split</div>
-      <div class="g2">
-        <div class="cbox" style="padding:12px"><div class="ct" style="margin-bottom:8px">Total Cost by Model</div><canvas id="modelChart" height="60"></canvas></div>
-        <div class="cbox" style="padding:12px"><div class="ct" style="margin-bottom:8px">Avg Cost / JC by Model</div><canvas id="modelAvgChart" height="60"></canvas></div>
-      </div>
-    </div>
+    <!-- INNER CONTENT -->
+    <div class="inner">
 
-    <!-- Top parts -->
-    <div>
-      <div class="sh">Top Parts (Pareto)</div>
-      <div class="tbl-box">
-        <div class="tbl-hdr"><span class="thl">Top 20 Parts by Cost</span><span id="parts-total" style="font-size:11px;color:var(--muted);font-family:var(--mono)"></span></div>
-        <div class="tw" id="parts-tbl"><div class="loading"><div class="spin"></div>Loading...</div></div>
+      <!-- Trends -->
+      <div style="margin-top:16px">
+        <div class="sh">Trends &amp; Mix</div>
+        <div class="g3">
+          <div class="cbox"><div class="ct">Daily Cost + Avg/JC</div><canvas id="dailyChart" height="130"></canvas></div>
+          <div class="cbox"><div class="ct">By Submission Type</div><canvas id="subChart" height="130"></canvas></div>
+          <div class="cbox"><div class="ct">By Commodity</div><canvas id="comChart" height="130"></canvas></div>
+        </div>
       </div>
-    </div>
 
-  </div>
-</div>
+      <!-- City + Hub -->
+      <div>
+        <div class="sh">City &amp; Hub</div>
+        <div class="g2">
+          <div class="cbox"><div class="ct">Avg Cost / JC by City</div><canvas id="cityChart" height="110"></canvas></div>
+          <div class="cbox"><div class="ct">Top 10 Hubs by Cost</div><canvas id="hubChart" height="110"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Hub table -->
+      <div>
+        <div class="sh">Hub Detail</div>
+        <div class="tbl-box">
+          <div class="tbl-hdr"><span class="thl">Hub-wise RMC Breakdown</span><span id="hub-count" style="font-size:11px;color:var(--muted);font-family:var(--mono)"></span></div>
+          <div class="tw" id="hub-tbl"><div class="loading"><div class="spin"></div>Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Model split -->
+      <div>
+        <div class="sh">Model Split</div>
+        <div class="g2">
+          <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelChart" height="60"></canvas></div>
+          <div class="cbox"><div class="ct">Avg Cost / JC by Model</div><canvas id="modelAvgChart" height="60"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Top parts -->
+      <div>
+        <div class="sh">Top Parts (Pareto)</div>
+        <div class="tbl-box">
+          <div class="tbl-hdr"><span class="thl">Top 20 Parts by Cost</span><span id="parts-total" style="font-size:11px;color:var(--muted);font-family:var(--mono)"></span></div>
+          <div class="tw" id="parts-tbl"><div class="loading"><div class="spin"></div>Loading...</div></div>
+        </div>
+      </div>
+
+    </div><!-- /inner -->
+  </div><!-- /content -->
+</div><!-- /main -->
 
 <script>
+JSEOF
 const SB   = "https://fuslpeyhpmofzijrotkb.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs";
 const HDR  = {apikey:ANON,Authorization:`Bearer ${ANON}`};
@@ -400,15 +303,7 @@ function onFilterChange(){
 
 // Dates: trigger on change (after calendar selection)
 // Dropdowns: trigger on change
-// Set default dates in JS (not HTML) to avoid spurious change events on load
-(function(){
-  const today = new Date().toISOString().slice(0,10);
-  const jan1  = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
-  document.getElementById('f-start').value = jan1;
-  document.getElementById('f-end').value   = today;
-})();
-
-// Attach listeners AFTER setting defaults so no spurious change fires
+// Attach listeners first (no values set yet so no spurious fires)
 ['f-start','f-end','f-city','f-model','f-sub','f-com','f-line'].forEach(id=>{
   document.getElementById(id).addEventListener('change', onFilterChange);
 });
@@ -616,7 +511,14 @@ function toggleSidebar() {
   }
 })();
 
-document.addEventListener("DOMContentLoaded", load);
+document.addEventListener("DOMContentLoaded", function(){
+  const today = new Date().toISOString().slice(0,10);
+  const jan1  = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+  document.getElementById('f-start').value = jan1;
+  document.getElementById('f-end').value   = today;
+  load();
+});
+-e 
 </script>
 </body>
 </html>
