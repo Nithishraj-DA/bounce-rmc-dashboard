@@ -428,15 +428,15 @@ td:nth-child(2){min-width:55px}
         <thead>
           <tr>
             <th class="th-group th-base" colspan="2">Fleet</th>
-            <th class="th-group th-rev" colspan="5">Revenue Metrics</th>
-            <th class="th-group th-cost" colspan="6">Overall Cost</th>
+            <th class="th-group th-rev" colspan="6">Revenue Metrics</th>
+            <th class="th-group th-cost" colspan="5">Overall Cost</th>
             <th class="th-group th-excl" colspan="5">Excl. Warranty</th>
             <th class="th-group th-wt" colspan="5">Wear &amp; Tear</th>
           </tr>
           <tr>
             <th>KM Bucket</th><th># Bikes</th>
-            <th class="z-rev">Rental Rev</th><th class="z-rev">Total Rev</th><th class="z-rev">Rev/Life</th><th class="z-rev">Rev/Active</th><th class="z-rev">Util%</th>
-            <th class="z-cost">Cost</th><th class="z-cost">Cost/KM</th><th class="z-cost">JC/Bike</th><th class="z-cost">Avg/Bike</th><th class="z-cost">Up%</th><th class="z-cost">Cost%Rev</th>
+            <th class="z-rev">Rental Rev</th><th class="z-rev">Total Rev</th><th class="z-rev">Rev/Life</th><th class="z-rev">Rev/Active</th><th class="z-rev">Util%</th><th class="z-rev">Uptime%</th>
+            <th class="z-cost">Cost</th><th class="z-cost">Cost/KM</th><th class="z-cost">JC/Bike</th><th class="z-cost">Avg/Bike</th><th class="z-cost">Cost%Rev</th>
             <th class="z-excl">Cost</th><th class="z-excl">Cost/KM</th><th class="z-excl">JC/Bike</th><th class="z-excl">Avg/Bike</th><th class="z-excl">Cost%Rev</th>
             <th class="z-wt">Cost</th><th class="z-wt">Cost/KM</th><th class="z-wt">JC/Bike</th><th class="z-wt">Avg/Bike</th><th class="z-wt">Cost%Rev</th>
           </tr>
@@ -652,11 +652,11 @@ function renderMatrix() {
       <td class="z-rev">${fmtL(revR)}</td><td class="z-rev">${fmtL(revA)}</td>
       <td class="z-rev">${rl?R(rl):'–'}</td><td class="z-rev">${ra?R(ra):'–'}</td>
       <td class="z-rev ${cfHi(parseFloat(util))}">${util}</td>
+      <td class="z-rev" style="color:#0cea56;font-weight:600">${upt}</td>
       <td class="z-cost">${fmtL(tc)}</td>
       <td class="z-cost ${cfLo(cpk,TH.cpkm)}">${cpk}</td>
       <td class="z-cost">${jcb}</td>
       <td class="z-cost ${cfBg(ab)}">₹${fmt(ab)}</td>
-      <td class="z-cost ${cfHi(parseFloat(upt))}">${upt}</td>
       <td class="z-cost ${cfLo(cpR,[4,8])}">${cpR}</td>
       <td class="z-excl">${fmtL(ex)}</td>
       <td class="z-excl ${cfLo(exk,TH.cpkm)}">${exk}</td>
@@ -693,7 +693,7 @@ function renderDetail() {
       <td>${r.active_days!=null?parseFloat(r.active_days).toFixed(1):'–'}</td>
       <td class="${cfHi(r.utilization_pct)}">${r.utilization_pct||'–'}</td>
       <td class="${cfOOS(r.oos_pct)}">${r.oos_pct||'–'}</td>
-      <td class="${cfHi(r.uptime_pct)}">${r.uptime_pct||'–'}</td>
+      <td style="color:#0cea56;font-weight:600">${r.uptime_pct||'–'}</td>
       <td>₹${fmt(cost)}</td><td>₹${fmt(n(r.part_cost))}</td><td>₹${fmt(n(r.labour_cost))}</td>
       <td>₹${fmt(n(r.wear_tear_cost))}</td><td>₹${fmt(n(r.warranty_cost))}</td>
       <td class="${cfLo(cpkm,TH.cpkm)}">${cpkm}</td>
@@ -724,10 +724,15 @@ function toggleSidebar() {
 }
 // Restore state
 (function(){
-  if (localStorage.getItem('sb_collapsed') === '1') {
+  // Default expanded — only collapse if user explicitly toggled it to '1'
+  const state = localStorage.getItem('sb_collapsed');
+  if (state === '1') {
     const sb = document.getElementById('sidebar');
     const btn = document.getElementById('sb-toggle');
-    if (sb) { sb.classList.add('collapsed'); btn.textContent = '›'; }
+    if (sb) { sb.classList.add('collapsed'); if(btn) btn.textContent = '›'; }
+  } else if (state === null) {
+    // First visit — ensure expanded, save state
+    localStorage.setItem('sb_collapsed', '0');
   }
 })();
 
