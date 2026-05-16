@@ -8,7 +8,7 @@
 /* ── BOUNCE BRAND TOKENS ── */
 :root {
   --bg: #18181b;
-  --surface: #131316;
+  --surface: #1e1e24;
   --surface2: #212127;
   --surface3: #23232b;
   --border: #2a2a33;
@@ -22,42 +22,174 @@
   --green-bg: #222d1b;
   --yellow: #ffb37b;
   --font: 'Segoe UI', Arial, sans-serif;
+  /* Bounce shared */
+  --bounce-red: #f53b3b;
+  --bounce-red-h: #d92d2d;
+  --bounce-dark: #18181b;
+  --bounce-surface: #131316;
+  --bounce-surface2: #212127;
+  --bounce-border: #2a2a33;
+  --bounce-muted: #bdbdbd;
+  --bounce-muted2: #7a7a8a;
+  --sw: 210px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;display:flex}
+.app-main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:all .22s}
+.app-scroll{flex:1;overflow-y:auto}
+.app-scroll::-webkit-scrollbar{width:4px}
+.app-scroll::-webkit-scrollbar-thumb{background:var(--bounce-border);border-radius:2px}
+
+/* ── BOUNCE BRAND ── */
+:root {
+  --bounce-red: #f53b3b;
+  --bounce-red-h: #d92d2d;
+  --bounce-dark: #18181b;
+  --bounce-surface: #131316;
+  --bounce-surface2: #212127;
+  --bounce-border: #2a2a33;
+  --bounce-muted: #bdbdbd;
+  --bounce-muted2: #7a7a8a;
+  --font: 'Segoe UI', Arial, sans-serif;
+  --sw: 210px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sw);
+  flex-shrink: 0;
+  background: var(--bounce-surface);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--bounce-border);
+  transition: width .22s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+.sidebar.collapsed { width: 54px; }
+
+/* Brand */
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--bounce-border);
+  min-height: 56px;
+  white-space: nowrap;
+}
+.sb-logo-img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+.sb-logo-fallback {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--bounce-red); display: flex; align-items: center;
+  justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.sb-name { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+.sb-name span { color: var(--bounce-red); }
+.sb-text { transition: opacity .15s; }
+.sidebar.collapsed .sb-text { opacity: 0; pointer-events: none; }
+
+/* Toggle */
+.sb-toggle {
+  position: absolute;
+  right: -12px;
+  top: 18px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--bounce-surface2);
+  border: 1px solid var(--bounce-border);
+  color: var(--bounce-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.sb-toggle:hover { background: var(--bounce-red); color: #fff; border-color: var(--bounce-red); }
+.sidebar.collapsed .sb-toggle { right: -13px; }
+
+/* Nav section */
+.sb-sec {
+  padding: 16px 14px 6px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--bounce-muted2);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-sec { opacity: 0; }
+
+/* Nav items */
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  margin: 1px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--bounce-muted);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+  position: relative;
+}
+.sb-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sb-item.active { background: rgba(245,59,59,.15); color: var(--bounce-red); }
+.sb-item.active .sb-icon { color: var(--bounce-red); }
+.sb-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.sb-label { transition: opacity .15s; }
+.sidebar.collapsed .sb-label { opacity: 0; }
+
+/* Tooltip on collapsed */
+.sidebar.collapsed .sb-item:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50px;
+  background: var(--bounce-surface2);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  border: 1px solid var(--bounce-border);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.sb-spacer { flex: 1; }
+
+/* Footer */
+.sb-foot {
+  padding: 12px 14px;
+  border-top: 1px solid var(--bounce-border);
+  font-size: 10px;
+  color: var(--bounce-muted2);
+  font-family: monospace;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-foot { opacity: 0; pointer-events: none; }
+.sb-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #0cea56;
+  display: inline-block; margin-right: 5px;
+  vertical-align: middle;
+  animation: sbpulse 2s infinite;
+}
+@keyframes sbpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
 
 /* ── NAV ── */
-.topnav{
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  padding:0 32px;
-  display:flex;align-items:center;gap:0;
-  height:58px;position:sticky;top:0;z-index:100;
-}
-.nav-logo{
-  display:flex;align-items:center;gap:10px;
-  margin-right:32px;text-decoration:none;
-}
-.nav-logo img{height:32px;object-fit:contain}
-.nav-logo-text{
-  font-weight:800;font-size:16px;letter-spacing:-.3px;
-  color:var(--text);
-}
-.nav-logo-text span{color:var(--red)}
-.nav-links{display:flex;gap:4px;align-items:center}
-.nav-links a{
-  color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;
-  padding:6px 14px;border-radius:6px;transition:all .15s;
-}
-.nav-links a:hover{color:var(--text);background:var(--surface2)}
-.nav-links a.active{color:var(--red);background:rgba(245,59,59,.1)}
-.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-.sync-ts{font-size:11px;color:var(--muted2)}
-.sync-btn{
-  background:transparent;border:1px solid var(--border);color:var(--muted);
-  padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s;
-}
-.sync-btn:hover{color:var(--text);border-color:var(--red)}
+/* topnav replaced by sidebar */
 
 /* ── FILTER BAR ── */
 .filter-bar{
@@ -201,22 +333,38 @@ td:nth-child(2){min-width:55px}
 <body>
 
 <!-- NAV -->
-<nav class="topnav">
-  <a class="nav-logo" href="dashboard.html">
-    <img src="https://bouncedaily.in/logo  (1).png" alt="Bounce" onerror="this.style.display='none'">
-    <span class="nav-logo-text">Bounce <span>Ops</span></span>
+
+<div class="sidebar" id="sidebar">
+  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">‹</button>
+  <div class="sb-brand">
+    <img class="sb-logo-img" src="https://bouncedaily.in/logo  (1).png"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="Bounce">
+    <div class="sb-logo-fallback" style="display:none">⚡</div>
+    <div class="sb-text">
+      <div class="sb-name">Bounce <span>Ops</span></div>
+    </div>
+  </div>
+  <div class="sb-sec">Analytics</div>
+  <a class="sb-item " href="dashboard.html" data-tip="RMC Dashboard">
+    <span class="sb-icon">📊</span><span class="sb-label">RMC Dashboard</span>
   </a>
-  <div class="nav-links">
-    <a href="dashboard.html">RMC Dashboard</a>
-    <a href="fleet-km.html" class="active">Fleet KM Analysis</a>
+  <a class="sb-item active" href="fleet-km.html" data-tip="Fleet KM Analysis">
+    <span class="sb-icon">🏍️</span><span class="sb-label">Fleet KM Analysis</span>
+  </a>
+  <div class="sb-spacer"></div>
+  <div class="sb-foot">
+    <div><span class="sb-dot"></span><span id="sync-lbl">Loading…</span></div>
+    <div style="margin-top:3px">v1 · Internal</div>
   </div>
-  <div class="nav-right">
-    <span class="sync-ts" id="sync-ts"></span>
-    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">🔄 Sync Now</button>
-  </div>
-</nav>
+</div>
+
+<div class="app-main"><div class="app-scroll">
 
 <!-- FILTERS -->
+<div style="display:flex;align-items:center;justify-content:flex-end;padding:8px 24px;background:var(--surface);border-bottom:1px solid var(--border);gap:12px;flex-shrink:0">
+  <span style="font-size:11px;color:var(--muted2)" id="sync-ts"></span>
+  <button style="background:transparent;border:1px solid var(--bounce-border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer" id="sync-btn" onclick="triggerSync()">🔄 Sync Now</button>
+</div>
 <div class="filter-bar">
   <div class="fg">
     <label>City</label>
@@ -566,9 +714,27 @@ function exportCSV(){
   a.download='fleet_km_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 }
 
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('sb-toggle');
+  sb.classList.toggle('collapsed');
+  btn.textContent = sb.classList.contains('collapsed') ? '›' : '‹';
+  localStorage.setItem('sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+}
+// Restore state
+(function(){
+  if (localStorage.getItem('sb_collapsed') === '1') {
+    const sb = document.getElementById('sidebar');
+    const btn = document.getElementById('sb-toggle');
+    if (sb) { sb.classList.add('collapsed'); btn.textContent = '›'; }
+  }
+})();
+
 // ── INIT ──
 populateMonths();
 load('all_time');
 </script>
+</div></div>
 </body>
 </html>

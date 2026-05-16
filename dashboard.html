@@ -5,41 +5,174 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>RMC Dashboard · Bounce Daily</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f4f6f9;--sidebar:#1a2035;--card:#ffffff;
+  --bg:#f0f2f5;--sidebar:#131316;--card:#ffffff;
   --border:#e5e9f0;--border2:#d0d8e8;
   --blue:#2563eb;--blue2:#1d4ed8;--blue-light:#eff6ff;
-  --red:#dc2626;--green:#16a34a;--amber:#d97706;--purple:#7c3aed;--teal:#0891b2;
+  --red:#f53b3b;--red2:#d92d2d;--green:#16a34a;--amber:#d97706;--purple:#7c3aed;--teal:#0891b2;
   --text:#0f172a;--text2:#475569;--muted:#94a3b8;
   --sb-text:#94a3b8;--sb-text2:#e2e8f0;
-  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --font:'Segoe UI',Arial,sans-serif;--mono:'Courier New',monospace;
   --sw:210px;
 }
+
+/* ── BOUNCE BRAND ── */
+:root {
+  --bounce-red: #f53b3b;
+  --bounce-red-h: #d92d2d;
+  --bounce-dark: #18181b;
+  --bounce-surface: #131316;
+  --bounce-surface2: #212127;
+  --bounce-border: #2a2a33;
+  --bounce-muted: #bdbdbd;
+  --bounce-muted2: #7a7a8a;
+  --font: 'Segoe UI', Arial, sans-serif;
+  --sw: 210px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sw);
+  flex-shrink: 0;
+  background: var(--bounce-surface);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid var(--bounce-border);
+  transition: width .22s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+}
+.sidebar.collapsed { width: 54px; }
+
+/* Brand */
+.sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--bounce-border);
+  min-height: 56px;
+  white-space: nowrap;
+}
+.sb-logo-img { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+.sb-logo-fallback {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--bounce-red); display: flex; align-items: center;
+  justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.sb-name { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+.sb-name span { color: var(--bounce-red); }
+.sb-text { transition: opacity .15s; }
+.sidebar.collapsed .sb-text { opacity: 0; pointer-events: none; }
+
+/* Toggle */
+.sb-toggle {
+  position: absolute;
+  right: -12px;
+  top: 18px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--bounce-surface2);
+  border: 1px solid var(--bounce-border);
+  color: var(--bounce-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.sb-toggle:hover { background: var(--bounce-red); color: #fff; border-color: var(--bounce-red); }
+.sidebar.collapsed .sb-toggle { right: -13px; }
+
+/* Nav section */
+.sb-sec {
+  padding: 16px 14px 6px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--bounce-muted2);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-sec { opacity: 0; }
+
+/* Nav items */
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  margin: 1px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--bounce-muted);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  white-space: nowrap;
+  position: relative;
+}
+.sb-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sb-item.active { background: rgba(245,59,59,.15); color: var(--bounce-red); }
+.sb-item.active .sb-icon { color: var(--bounce-red); }
+.sb-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.sb-label { transition: opacity .15s; }
+.sidebar.collapsed .sb-label { opacity: 0; }
+
+/* Tooltip on collapsed */
+.sidebar.collapsed .sb-item:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50px;
+  background: var(--bounce-surface2);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  border: 1px solid var(--bounce-border);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.sb-spacer { flex: 1; }
+
+/* Footer */
+.sb-foot {
+  padding: 12px 14px;
+  border-top: 1px solid var(--bounce-border);
+  font-size: 10px;
+  color: var(--bounce-muted2);
+  font-family: monospace;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.sidebar.collapsed .sb-foot { opacity: 0; pointer-events: none; }
+.sb-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #0cea56;
+  display: inline-block; margin-right: 5px;
+  vertical-align: middle;
+  animation: sbpulse 2s infinite;
+}
+@keyframes sbpulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex}
 
 /* SIDEBAR */
-.sidebar{width:var(--sw);flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;height:100vh}
-.sb-brand{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-logo{width:30px;height:30px;background:var(--blue);border-radius:7px;display:flex;align-items:center;justify-content:center}
-.sb-logo svg{width:16px;height:16px;fill:#fff}
-.sb-name{font-size:13px;font-weight:700;color:#fff;line-height:1.2}
-.sb-sub{font-size:10px;color:var(--sb-text)}
-.sb-sec{padding:18px 14px 6px;font-size:9.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
-.sb-item{display:flex;align-items:center;gap:8px;padding:8px 14px;margin:1px 8px;border-radius:6px;font-size:12.5px;color:var(--sb-text);cursor:pointer;transition:all .15s;text-decoration:none}
-.sb-item:hover{background:rgba(255,255,255,.07);color:var(--sb-text2)}
-.sb-item.active{background:rgba(37,99,235,.2);color:#93c5fd;font-weight:500}
-.sb-icon{font-size:14px;width:16px;text-align:center}
-.sb-spacer{flex:1}
-.sb-foot{padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:var(--muted);font-family:var(--mono)}
-.sb-dot{width:5px;height:5px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;display:inline-block;margin-right:5px;vertical-align:middle}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* sidebar styles moved to shared sb-css */
 
 /* MAIN */
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:margin-left .22s}
 
 /* TOPBAR */
 .topbar{flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 22px;height:52px;background:#fff;border-bottom:1px solid var(--border)}
@@ -110,20 +243,31 @@ tbody td{padding:8px 14px;white-space:nowrap;color:var(--text)}
 </head>
 <body>
 
-<div class="sidebar">
+
+<div class="sidebar" id="sidebar">
+  <button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle sidebar">‹</button>
   <div class="sb-brand">
-    <div class="sb-logo"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
-    <div><div class="sb-name">Bounce Daily</div><div class="sb-sub">RMC Ops</div></div>
+    <img class="sb-logo-img" src="https://bouncedaily.in/logo  (1).png"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="Bounce">
+    <div class="sb-logo-fallback" style="display:none">⚡</div>
+    <div class="sb-text">
+      <div class="sb-name">Bounce <span>Ops</span></div>
+    </div>
   </div>
   <div class="sb-sec">Analytics</div>
-  <a class="sb-item active" href="dashboard.html"><span class="sb-icon">📊</span>RMC Dashboard</a>
-  <a class="sb-item" href="fleet-km.html"><span class="sb-icon">🏍️</span>Fleet KM Analysis</a>
+  <a class="sb-item active" href="dashboard.html" data-tip="RMC Dashboard">
+    <span class="sb-icon">📊</span><span class="sb-label">RMC Dashboard</span>
+  </a>
+  <a class="sb-item " href="fleet-km.html" data-tip="Fleet KM Analysis">
+    <span class="sb-icon">🏍️</span><span class="sb-label">Fleet KM Analysis</span>
+  </a>
   <div class="sb-spacer"></div>
   <div class="sb-foot">
-    <div><span class="sb-dot"></span><span id="sync-lbl">Loading...</span></div>
-    <div style="margin-top:3px;color:#475569">v1 · Internal</div>
+    <div><span class="sb-dot"></span><span id="sync-lbl">Loading…</span></div>
+    <div style="margin-top:3px">v1 · Internal</div>
   </div>
 </div>
+
 
 <div class="main">
   <div class="topbar">
@@ -318,7 +462,7 @@ async function load(){
   const e = document.getElementById("f-end").value;
   document.getElementById("row-badge").textContent  = `${jcs.toLocaleString()} JCs`;
   document.getElementById("date-badge").textContent = `${s} → ${e}`;
-  document.getElementById("sync-lbl").textContent   = `Synced · ${new Date().toLocaleTimeString()}`;
+  document.getElementById("sync-lbl").textContent = `Synced · ${new Date().toLocaleTimeString()}`;
 
   // KPIs
   const KPIS = [
@@ -438,6 +582,23 @@ async function load(){
     </tr>`;
   }).join("")}</tbody></table>`;
 }
+
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('sb-toggle');
+  sb.classList.toggle('collapsed');
+  btn.textContent = sb.classList.contains('collapsed') ? '›' : '‹';
+  localStorage.setItem('sb_collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+}
+// Restore state
+(function(){
+  if (localStorage.getItem('sb_collapsed') === '1') {
+    const sb = document.getElementById('sidebar');
+    const btn = document.getElementById('sb-toggle');
+    if (sb) { sb.classList.add('collapsed'); btn.textContent = '›'; }
+  }
+})();
 
 document.addEventListener("DOMContentLoaded", load);
 </script>
