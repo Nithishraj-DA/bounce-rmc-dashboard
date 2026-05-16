@@ -3,117 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fleet KM Analysis — Bounce</title>
+<title>Fleet KM Analysis — Bounce Ops</title>
 <style>
-:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3348;--text:#e2e8f0;--muted:#7c85a2;--accent:#6c63ff;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444}
+/* ── BOUNCE BRAND TOKENS ── */
+:root {
+  --bg: #18181b;
+  --surface: #131316;
+  --surface2: #212127;
+  --surface3: #23232b;
+  --border: #2a2a33;
+  --text: #ffffff;
+  --muted: #bdbdbd;
+  --muted2: #7a7a8a;
+  --red: #f53b3b;
+  --red-hover: #d92d2d;
+  --green: #0cea56;
+  --green-dim: #56d364;
+  --green-bg: #222d1b;
+  --yellow: #ffb37b;
+  --font: 'Segoe UI', Arial, sans-serif;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans','Segoe UI',sans-serif;font-size:13px;min-height:100vh}
-.topnav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:32px;height:52px;position:sticky;top:0;z-index:100}
-.topnav .logo{font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-.3px}
-.topnav a{color:var(--muted);text-decoration:none;font-size:13px;padding:4px 0;transition:color .15s}
-.topnav a:hover,.topnav a.active{color:var(--text);border-bottom:2px solid var(--accent)}
-.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;min-height:100vh}
+
+/* ── NAV ── */
+.topnav{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;
+  display:flex;align-items:center;gap:0;
+  height:58px;position:sticky;top:0;z-index:100;
+}
+.nav-logo{
+  display:flex;align-items:center;gap:10px;
+  margin-right:32px;text-decoration:none;
+}
+.nav-logo img{height:32px;object-fit:contain}
+.nav-logo-text{
+  font-weight:800;font-size:16px;letter-spacing:-.3px;
+  color:var(--text);
+}
+.nav-logo-text span{color:var(--red)}
+.nav-links{display:flex;gap:4px;align-items:center}
+.nav-links a{
+  color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;
+  padding:6px 14px;border-radius:6px;transition:all .15s;
+}
+.nav-links a:hover{color:var(--text);background:var(--surface2)}
+.nav-links a.active{color:var(--red);background:rgba(245,59,59,.1)}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.sync-ts{font-size:11px;color:var(--muted2)}
+.sync-btn{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s;
+}
+.sync-btn:hover{color:var(--text);border-color:var(--red)}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  background:var(--surface);
+  border-bottom:2px solid var(--border);
+  padding:10px 32px;
+  display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;
+}
 .fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.fg select,.fg input[type=date]{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;min-width:130px;cursor:pointer}
-.fg select:focus,.fg input[type=date]:focus{outline:none;border-color:var(--accent)}
+.fg label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.fg select,.fg input[type=date]{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:7px 10px;border-radius:6px;font-size:12px;min-width:130px;
+  cursor:pointer;font-family:var(--font);transition:border-color .15s;
+}
+.fg select:focus,.fg input[type=date]:focus{outline:none;border-color:var(--red)}
 .divider{width:1px;background:var(--border);align-self:stretch;margin:0 4px}
-.btn-apply{background:var(--accent);color:#fff;border:none;padding:7px 18px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;align-self:flex-end}
-.btn-apply:hover{opacity:.85}.btn-apply:disabled{opacity:.4;cursor:default}
-.btn-reset{background:transparent;color:var(--muted);border:1px solid var(--border);padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;align-self:flex-end}
-.btn-reset:hover{color:var(--text);border-color:var(--text)}
 .type-btns{display:flex}
-.type-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:12px;cursor:pointer;transition:all .15s}
-.type-btn:first-child{border-radius:6px 0 0 6px}.type-btn:last-child{border-radius:0 6px 6px 0}
-.type-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.sync-info{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);align-self:flex-end;margin-left:auto}
-.sync-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
-.sync-btn:hover{color:var(--text);border-color:var(--text)}
-.mode-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;margin-left:8px}
-.mode-live{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
-.mode-sb{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
-.main{padding:20px 24px}
-.page-title{font-size:18px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:10px}
-.page-sub{color:var(--muted);font-size:12px;margin-bottom:20px}
-.loading{display:flex;align-items:center;gap:12px;padding:40px;color:var(--muted);font-size:14px}
-.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.type-btn{
+  background:var(--surface2);border:1px solid var(--border);color:var(--muted);
+  padding:7px 12px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--font);
+}
+.type-btn:first-child{border-radius:6px 0 0 6px}
+.type-btn:last-child{border-radius:0 6px 6px 0}
+.type-btn.active{background:var(--red);color:#fff;border-color:var(--red)}
+.type-btn:hover:not(.active){background:var(--surface3);color:var(--text)}
+.mode-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+}
+.mode-sb{background:rgba(6,234,86,.1);color:var(--green-dim);border:1px solid rgba(6,234,86,.25)}
+.mode-live{background:rgba(255,179,123,.1);color:var(--yellow);border:1px solid rgba(255,179,123,.25)}
+
+/* ── MAIN ── */
+.main{padding:20px 32px}
+.page-header{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.page-title{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.page-sub{color:var(--muted2);font-size:12px;margin-bottom:20px}
+.loading{display:flex;align-items:center;gap:12px;padding:48px 0;color:var(--muted);font-size:14px}
+.spinner{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .error-msg{background:#1f0505;border:1px solid var(--red);color:var(--red);padding:12px 16px;border-radius:8px}
+
+/* ── SECTION ── */
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.section-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
-.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;padding:2px 8px;border-radius:20px}
+.section-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--muted)}
+.section-title span{color:var(--text)}
+.badge{background:var(--surface2);border:1px solid var(--border);color:var(--muted2);font-size:11px;padding:2px 8px;border-radius:20px}
 .section-controls{display:flex;align-items:center;gap:8px}
 .search-wrap{position:relative}
-.search-wrap input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px 6px 30px;border-radius:6px;font-size:12px;width:190px}
-.search-wrap input:focus{outline:none;border-color:var(--accent)}
-.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px}
-.export-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer}
+.search-wrap input{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:6px 10px 6px 30px;border-radius:6px;font-size:12px;width:190px;font-family:var(--font);
+}
+.search-wrap input:focus{outline:none;border-color:var(--red)}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:12px}
+.export-btn{
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s;
+}
 .export-btn:hover{color:var(--text);border-color:var(--text)}
+
+/* ── TABLES ── */
 .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:24px}
 table{border-collapse:collapse;width:100%;white-space:nowrap}
-.th-group{text-align:center;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
-.th-base{background:var(--surface2);color:var(--muted)}
-.th-rev{background:#166534;color:#86efac}
-.th-cost{background:#1e3a8a;color:#93c5fd}
-.th-excl{background:#5b21b6;color:#c4b5fd}
-.th-wt{background:#7f1d1d;color:#fca5a5}
-thead tr:nth-child(2) th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:6px 10px;border-bottom:2px solid var(--border);text-align:right}
+
+/* Group headers */
+.th-group{text-align:center;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.th-base{background:var(--surface3);color:var(--muted2)}
+.th-rev{background:#0d2e1a;color:#4ade80}
+.th-cost{background:#0f1f3d;color:#60a5fa}
+.th-excl{background:#1e1030;color:#c084fc}
+.th-wt{background:#2d0f0f;color:#f87171}
+
+/* Col headers */
+thead tr:nth-child(2) th{
+  background:var(--surface3);color:var(--muted2);font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px;padding:6px 10px;
+  border-bottom:2px solid var(--border);text-align:right;
+}
 thead tr:nth-child(2) th:first-child,thead tr:nth-child(2) th:nth-child(2){text-align:left}
+
+/* Rows */
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-tbody tr:hover{background:rgba(108,99,255,.06)}
-tbody tr.total-row{background:var(--surface2);font-weight:700;border-top:2px solid var(--border)}
-td{padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
-td:first-child{text-align:left;font-weight:600;background:var(--surface);position:sticky;left:0;z-index:1;border-right:1px solid var(--border);min-width:90px}
+tbody tr:hover{background:rgba(245,59,59,.04)}
+tbody tr.total-row{background:var(--surface2);font-weight:700;border-top:2px solid var(--red)}
+tbody tr.total-row td:first-child{background:var(--surface2)}
+td{padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text)}
+td:first-child{
+  text-align:left;font-weight:600;background:var(--surface);
+  position:sticky;left:0;z-index:1;border-right:1px solid var(--border);min-width:95px;
+}
 td:nth-child(2){min-width:55px}
-.z-rev{background:rgba(22,101,52,.15)}.z-cost{background:rgba(30,58,138,.15)}
-.z-excl{background:rgba(91,33,182,.12)}.z-wt{background:rgba(127,29,29,.12)}
-/* conditional formatting */
-.hi-green{color:#22c55e;font-weight:600}.mid-yellow{color:#f59e0b}.lo-red{color:#ef4444;font-weight:600}
-.lo-green{color:#22c55e;font-weight:600}.hi-red{color:#ef4444;font-weight:600}
-.bg-green{background:rgba(34,197,94,.12)!important}.bg-yellow{background:rgba(245,158,11,.1)!important}.bg-red{background:rgba(239,68,68,.13)!important}
+
+/* Zone backgrounds */
+.z-rev{background:rgba(6,234,86,.06)}
+.z-cost{background:rgba(59,130,246,.07)}
+.z-excl{background:rgba(168,85,247,.06)}
+.z-wt{background:rgba(248,113,113,.06)}
+
+/* ── CONDITIONAL FORMAT ── */
+.hi-g{color:#0cea56;font-weight:600}
+.mid-y{color:#ffb37b}
+.lo-r{color:#f53b3b;font-weight:600}
+.lo-g{color:#0cea56;font-weight:600}
+.hi-r{color:#f53b3b;font-weight:600}
+.bg-g{background:rgba(6,234,86,.1)!important}
+.bg-y{background:rgba(255,179,123,.08)!important}
+.bg-r{background:rgba(245,59,59,.1)!important}
+
+/* ── DETAIL TABLE ── */
 .detail-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
-.detail-table{border-collapse:collapse;width:100%;white-space:nowrap}
-.detail-table thead tr th{background:var(--surface2);color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:2px solid var(--border);text-align:right}
-.detail-table thead tr th:first-child,.detail-table thead tr th:nth-child(2),
-.detail-table thead tr th:nth-child(3),.detail-table thead tr th:nth-child(4){text-align:left}
-.detail-table tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-.detail-table tbody tr:hover{background:rgba(108,99,255,.06)}
-.detail-table tbody td{padding:7px 10px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.detail-table tbody td:first-child,.detail-table tbody td:nth-child(2),
-.detail-table tbody td:nth-child(3),.detail-table tbody td:nth-child(4){text-align:left}
-.status-pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
-.s-rfd{background:rgba(34,197,94,.15);color:#22c55e}.s-oos{background:rgba(239,68,68,.15);color:#ef4444}
-.s-active{background:rgba(59,130,246,.15);color:#60a5fa}.s-other{background:rgba(124,133,162,.15);color:var(--muted)}
-.pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 0 4px;font-size:12px;color:var(--muted)}
-.page-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:12px}
-.page-btn:hover{border-color:var(--accent);color:var(--accent)}.page-btn:disabled{opacity:.3;cursor:default}
+.dt{border-collapse:collapse;width:100%;white-space:nowrap}
+.dt thead tr th{
+  background:var(--surface3);color:var(--muted2);font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;
+  border-bottom:2px solid var(--border);text-align:right;
+}
+.dt thead tr th:first-child,.dt thead tr th:nth-child(2),
+.dt thead tr th:nth-child(3),.dt thead tr th:nth-child(4){text-align:left}
+.dt tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+.dt tbody tr:hover{background:rgba(245,59,59,.04)}
+.dt tbody td{padding:7px 10px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums}
+.dt tbody td:first-child,.dt tbody td:nth-child(2),
+.dt tbody td:nth-child(3),.dt tbody td:nth-child(4){text-align:left}
+.pill{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.p-rfd{background:rgba(6,234,86,.15);color:#0cea56}
+.p-oos{background:rgba(245,59,59,.15);color:#f53b3b}
+.p-act{background:rgba(59,130,246,.15);color:#60a5fa}
+.p-oth{background:rgba(189,189,189,.12);color:var(--muted)}
+
+.pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:12px 0 4px;font-size:12px;color:var(--muted2)}
+.page-btn{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:4px 12px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s;
+}
+.page-btn:hover{border-color:var(--red);color:var(--red)}
+.page-btn:disabled{opacity:.3;cursor:default}
 </style>
 </head>
 <body>
+
+<!-- NAV -->
 <nav class="topnav">
-  <span class="logo">⚡ Bounce Ops</span>
-  <a href="dashboard.html">RMC Dashboard</a>
-  <a href="fleet-km.html" class="active">Fleet KM Analysis</a>
+  <a class="nav-logo" href="dashboard.html">
+    <img src="https://bouncedaily.in/logo  (1).png" alt="Bounce" onerror="this.style.display='none'">
+    <span class="nav-logo-text">Bounce <span>Ops</span></span>
+  </a>
+  <div class="nav-links">
+    <a href="dashboard.html">RMC Dashboard</a>
+    <a href="fleet-km.html" class="active">Fleet KM Analysis</a>
+  </div>
+  <div class="nav-right">
+    <span class="sync-ts" id="sync-ts"></span>
+    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">🔄 Sync Now</button>
+  </div>
 </nav>
 
+<!-- FILTERS -->
 <div class="filter-bar">
-  <div class="fg"><label>City</label>
+  <div class="fg">
+    <label>City</label>
     <select id="f-city">
       <option value="">All Cities</option>
       <option>Bangalore</option><option>Hyderabad</option><option>NCR</option>
     </select>
   </div>
-  <div class="fg"><label>Hub</label>
+  <div class="fg">
+    <label>Hub</label>
     <select id="f-hub"><option value="">All Hubs</option></select>
   </div>
-  <div class="fg"><label>Model</label>
+  <div class="fg">
+    <label>Model</label>
     <select id="f-model">
       <option value="">All Models</option>
       <option>e1+x</option><option>e1+xPRO</option><option>LowSpeed</option>
     </select>
   </div>
   <div class="divider"></div>
-  <div class="fg"><label>Cost Type</label>
+  <div class="fg">
+    <label>Cost Type</label>
     <div class="type-btns">
       <button class="type-btn active" data-type="total">Part + Labour</button>
       <button class="type-btn" data-type="part">Part Only</button>
@@ -121,26 +246,34 @@ td:nth-child(2){min-width:55px}
     </div>
   </div>
   <div class="divider"></div>
-  <div class="fg"><label>Month</label>
-    <select id="f-month">
-      <option value="">All Time</option>
-    </select>
-  </div>
-  <button class="btn-reset" onclick="resetAll()">Reset</button>
-  <div class="sync-info">
-    <span id="sync-ts"></span>
-    <button class="sync-btn" id="sync-btn" onclick="triggerSync()">🔄 Sync</button>
+  <div class="fg">
+    <label>Month</label>
+    <select id="f-month"><option value="all_time">All Time</option></select>
   </div>
 </div>
 
+<!-- MAIN -->
 <div class="main">
-  <div class="page-title">Fleet KM Analysis <span id="mode-badge"></span></div>
+  <div class="page-header">
+    <div class="page-title">Fleet KM Analysis</div>
+    <span id="mode-badge"></span>
+  </div>
   <div class="page-sub" id="data-info">Loading…</div>
-  <div id="loading" class="loading"><div class="spinner"></div> <span id="load-msg">Loading from Supabase…</span></div>
+
+  <div id="loading" class="loading">
+    <div class="spinner"></div>
+    <span id="load-msg">Loading from Supabase…</span>
+  </div>
   <div id="error" class="error-msg" style="display:none"></div>
+
   <div id="content" style="display:none">
+
+    <!-- MATRIX -->
     <div class="section-header">
-      <div class="section-title">📊 KM Cohort Summary <span class="badge" id="matrix-badge">–</span></div>
+      <div class="section-title">
+        <span>KM Cohort Summary</span>
+        <span class="badge" id="matrix-badge">–</span>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -163,18 +296,23 @@ td:nth-child(2){min-width:55px}
         <tbody id="matrix-body"></tbody>
       </table>
     </div>
+
+    <!-- DETAIL -->
     <div class="section-header" style="margin-top:4px">
-      <div class="section-title">🏍️ Bike Level Detail <span class="badge" id="detail-badge">–</span></div>
+      <div class="section-title">
+        <span>Bike Level Detail</span>
+        <span class="badge" id="detail-badge">–</span>
+      </div>
       <div class="section-controls">
         <div class="search-wrap">
-          <span class="search-icon">🔍</span>
+          <span class="si">🔍</span>
           <input type="text" id="bike-search" placeholder="Search reg / hub…" oninput="filterDetail()">
         </div>
         <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
       </div>
     </div>
     <div class="detail-table-wrap">
-      <table class="detail-table">
+      <table class="dt">
         <thead><tr>
           <th>Reg No.</th><th>City</th><th>Hub</th><th>Model</th>
           <th>KM Bucket</th><th>Curr ODO</th><th>Active Days</th>
@@ -197,95 +335,102 @@ td:nth-child(2){min-width:55px}
 <script>
 const SB_URL  = 'https://fuslpeyhpmofzijrotkb.supabase.co';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs';
-const PROXY   = SB_URL + '/functions/v1/metabase-proxy';
 const SYNC_FN = SB_URL + '/functions/v1/sync-fleet-km';
-const SB_HDR  = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON };
+// Only fetch columns we actually render — cuts payload from 14MB to ~2MB
+const COLS = 'bike_id,reg_number,city,hub_name,model_name,status,odometer_bucket,current_odometer,filtered_odometer,active_days,total_life_days,utilization_pct,oos_pct,uptime_pct,total_service_cost,part_cost,labour_cost,wear_tear_cost,wear_tear_part_cost,wear_tear_labour_cost,warranty_cost,warranty_part_cost,warranty_labour_cost,total_cost_per_km,repair_frequency,rental_revenue,total_revenue,synced_at';
+const SB_HDR = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Encoding': 'gzip', 'Range': '0-9999', 'Prefer': 'count=none' };
+
 const ODO_ORDER = ['Undeployed','0 - 5K','5K - 10K','10K - 15K','15K - 20K','20K - 25K','25K - 30K','30K - 35K','35K - 40K','40K+','No Data'];
 const PER_PAGE = 50;
+let allData=[], filtered=[], detailData=[], costType='total', pg=1;
+let TH = {};
 
-let allData=[], filtered=[], detailData=[], costType='total', pg=1, isLive=false;
-
-// ── FETCH ──
-async function load(month='all_time') {
-  document.getElementById('loading').style.display='flex';
-  document.getElementById('content').style.display='none';
-  document.getElementById('error').style.display='none';
-  document.getElementById('load-msg').textContent = 'Loading from Supabase…';
-
-  try {
-    // Always read from Supabase — filter by month column
-    const monthParam = encodeURIComponent(month);
-    // Fetch all rows for this month in one shot (max 10000)
-    const sbHeaders = { ...SB_HDR, 'Range': '0-9999', 'Prefer': 'count=none' };
-    const res = await fetch(
-      SB_URL + '/rest/v1/fleet_km_data?select=*&month=eq.' + monthParam + '&order=current_odometer.desc',
-      { headers: sbHeaders }
-    );
-    if (!res.ok) throw new Error('Supabase error ' + res.status);
-    allData = await res.json();
-    if (!Array.isArray(allData)) throw new Error('Bad response format');
-
-    // Sync time
-    const sr = await fetch(SB_URL + '/rest/v1/fleet_km_data?select=synced_at&month=eq.' + monthParam + '&order=synced_at.desc&limit=1', { headers: SB_HDR });
-    const sd = await sr.json();
-    if (sd?.[0]?.synced_at) {
-      const d = new Date(sd[0].synced_at);
-      document.getElementById('sync-ts').textContent = 'Synced: ' + d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
-    }
-
-    const monthSel = document.getElementById('f-month');
-    const monthLabel = monthSel.options[monthSel.selectedIndex]?.text || month;
-    document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase</span>';
-    document.getElementById('data-info').textContent =
-      allData.length.toLocaleString('en-IN') + ' bikes · ' + monthLabel + ' · Supabase (instant)';
-
-    populateHubs(document.getElementById('f-city').value);
-    applyFilters();
-    document.getElementById('loading').style.display='none';
-    document.getElementById('content').style.display='block';
-  } catch(err) {
-    document.getElementById('loading').style.display='none';
-    document.getElementById('error').style.display='block';
-    document.getElementById('error').textContent = 'Failed to load: ' + err.message;
+// ── MONTH DROPDOWN ──
+function populateMonths() {
+  const sel = document.getElementById('f-month');
+  const now = new Date();
+  for (let i = 0; i < 13; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0,7);
+    const label = d.toLocaleString('en-IN', {month:'short', year:'numeric'});
+    const o = document.createElement('option');
+    o.value = val; o.textContent = label;
+    sel.appendChild(o);
   }
 }
 
-function applyDates() { applyMonth(); }
+// ── LOAD FROM SUPABASE ──
+async function load(month) {
+  month = month || document.getElementById('f-month').value || 'all_time';
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('content').style.display = 'none';
+  document.getElementById('error').style.display   = 'none';
+  document.getElementById('load-msg').textContent  = 'Loading from Supabase…';
 
-async function triggerSync() {
-  const btn = document.getElementById('sync-btn');
-  btn.disabled=true; btn.textContent='⏳ Syncing…';
   try {
-    const r = await fetch(SYNC_FN, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
-    const d = await r.json();
-    if (d.success) { btn.textContent='✅ Done!'; setTimeout(()=>{ btn.textContent='🔄 Sync'; btn.disabled=false; if(!isLive)load(); },1500); }
-    else throw new Error(d.error);
-  } catch(e) { btn.textContent='❌ Failed'; setTimeout(()=>{ btn.textContent='🔄 Sync'; btn.disabled=false; },2000); }
+    const url = SB_URL + '/rest/v1/fleet_km_data?select=' + COLS + '&month=eq.' + encodeURIComponent(month) + '&order=current_odometer.desc';
+    const res = await fetch(url, { headers: SB_HDR });
+    if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
+    allData = await res.json();
+    if (!Array.isArray(allData)) throw new Error('Unexpected format');
+
+    // Sync time from first row
+    if (allData[0]?.synced_at) {
+      const d = new Date(allData[0].synced_at);
+      document.getElementById('sync-ts').textContent = 'Synced ' + d.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+    }
+
+    const sel = document.getElementById('f-month');
+    const label = sel.options[sel.selectedIndex]?.text || month;
+    document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase</span>';
+    document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · ' + label;
+
+    populateHubs(document.getElementById('f-city').value);
+    applyFilters();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display   = 'block';
+    document.getElementById('error').textContent     = 'Failed: ' + e.message;
+  }
 }
 
-// ── DROPDOWNS — instant, no Apply button ──
+// ── SYNC ──
+async function triggerSync() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true; btn.textContent = '⏳ Syncing…';
+  const month = document.getElementById('f-month').value || 'all_time';
+  try {
+    const r = await fetch(SYNC_FN, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({months:[month,'all_time']})});
+    const d = await r.json();
+    if (d.success) {
+      btn.textContent = '✅ Done!';
+      setTimeout(() => { btn.textContent='🔄 Sync Now'; btn.disabled=false; load(month); }, 1500);
+    } else throw new Error(d.error);
+  } catch(e) {
+    btn.textContent='❌ Failed'; setTimeout(()=>{ btn.textContent='🔄 Sync Now'; btn.disabled=false; }, 2000);
+  }
+}
+
+// ── DROPDOWNS — instant ──
 function populateHubs(city) {
   const sel=document.getElementById('f-hub'), cur=sel.value;
   sel.innerHTML='<option value="">All Hubs</option>';
   [...new Set(allData.filter(r=>!city||r.city===city).map(r=>r.hub_name).filter(Boolean))].sort()
     .forEach(h=>{ const o=document.createElement('option'); o.value=o.textContent=h; if(h===cur)o.selected=true; sel.appendChild(o); });
 }
-document.getElementById('f-city').addEventListener('change', function(){
-  populateHubs(this.value);
-  document.getElementById('f-hub').value='';
-  applyFilters();
-});
+document.getElementById('f-city').addEventListener('change', function(){ populateHubs(this.value); document.getElementById('f-hub').value=''; applyFilters(); });
 document.getElementById('f-hub').addEventListener('change', applyFilters);
 document.getElementById('f-model').addEventListener('change', applyFilters);
+document.getElementById('f-month').addEventListener('change', function(){ load(this.value||'all_time'); });
 document.querySelectorAll('.type-btn').forEach(btn=>btn.addEventListener('click', function(){
   document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
   this.classList.add('active'); costType=this.dataset.type; renderAll();
 }));
 
 function applyFilters() {
-  const city=document.getElementById('f-city').value,
-        hub=document.getElementById('f-hub').value,
-        model=document.getElementById('f-model').value;
+  const city=document.getElementById('f-city').value, hub=document.getElementById('f-hub').value, model=document.getElementById('f-model').value;
   filtered=allData.filter(r=>(!city||r.city===city)&&(!hub||r.hub_name===hub)&&(!model||r.model_name===model));
   pg=1; filterDetail(); renderAll();
 }
@@ -294,147 +439,124 @@ function filterDetail() {
   detailData=filtered.filter(r=>!q||(r.reg_number||'').toLowerCase().includes(q)||(r.hub_name||'').toLowerCase().includes(q)||(r.city||'').toLowerCase().includes(q));
   pg=1; renderDetail();
 }
-function resetAll() {
-  ['f-city','f-hub','f-model','f-month'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('bike-search').value='';
-  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector('.type-btn[data-type="total"]').classList.add('active');
-  costType='total'; load('all_time');
-}
 
-// ── COST ──
-const num = v => +(v||0);
-function getCost(r)   { return costType==='part'?num(r.part_cost):costType==='labour'?num(r.labour_cost):num(r.total_service_cost); }
-function getWT(r)     { return costType==='part'?num(r.wear_tear_part_cost):costType==='labour'?num(r.wear_tear_labour_cost):num(r.wear_tear_cost); }
-function getWarr(r)   { return costType==='part'?num(r.warranty_part_cost):costType==='labour'?num(r.warranty_labour_cost):num(r.warranty_cost); }
-function getExcl(r)   { return Math.max(0,getCost(r)-getWarr(r)); }
+// ── COST SELECTORS ──
+const n=v=>+(v||0);
+function getCost(r){ return costType==='part'?n(r.part_cost):costType==='labour'?n(r.labour_cost):n(r.total_service_cost); }
+function getWT(r)  { return costType==='part'?n(r.wear_tear_part_cost):costType==='labour'?n(r.wear_tear_labour_cost):n(r.wear_tear_cost); }
+function getWarr(r){ return costType==='part'?n(r.warranty_part_cost):costType==='labour'?n(r.warranty_labour_cost):n(r.warranty_cost); }
+function getExcl(r){ return Math.max(0,getCost(r)-getWarr(r)); }
 
 // ── FORMAT ──
 const fmt  = v => v==null?'–':Number(v).toLocaleString('en-IN',{maximumFractionDigits:0});
-const fmtL = v => { if(v==null||isNaN(v))return'–'; v=Number(v); if(v>=1e7)return'₹'+(v/1e7).toFixed(2)+'Cr'; if(v>=1e5)return'₹'+(v/1e5).toFixed(1)+'L'; if(v>=1e3)return'₹'+(v/1e3).toFixed(1)+'K'; return'₹'+fmt(v); };
 const fmtK = v => v==null||isNaN(+v)?'–':'₹'+Number(v).toFixed(2);
+const fmtL = v => {
+  if(v==null||isNaN(v))return'–'; v=Number(v);
+  if(v>=1e7)return'₹'+(v/1e7).toFixed(2)+'Cr';
+  if(v>=1e5)return'₹'+(v/1e5).toFixed(1)+'L';
+  if(v>=1e3)return'₹'+(v/1e3).toFixed(1)+'K';
+  return'₹'+fmt(v);
+};
 
-// ── CONDITIONAL FORMATTING ──
-// Percentile-based thresholds computed from visible filtered rows
-let TH = {};
-function buildThresholds() {
-  const asc = f => filtered.map(f).filter(v=>v!=null&&!isNaN(v)).sort((a,b)=>a-b);
-  const p = (arr,frac) => arr.length ? arr[Math.floor(arr.length*frac)] : null;
-  const utils = asc(r=>parseFloat(r.utilization_pct));
-  const ooss  = asc(r=>parseFloat(r.oos_pct));
-  const cpkms = asc(r=>num(r.total_cost_per_km));
-  const costs = asc(r=>getCost(r));
-  TH = {
-    util: [p(utils,.33), p(utils,.66)],   // higher=better
-    oos:  [p(ooss,.33),  p(ooss,.66)],    // lower=better
-    cpkm: [p(cpkms,.33), p(cpkms,.66)],   // lower=better
-    cost: [p(costs,.33), p(costs,.66)],   // lower=better
-  };
+// ── CONDITIONAL FORMAT — percentile based ──
+function buildTH() {
+  const asc=f=>filtered.map(f).filter(v=>v!=null&&!isNaN(v)).sort((a,b)=>a-b);
+  const p=(arr,f)=>arr.length?arr[Math.floor(arr.length*f)]:null;
+  const utils=asc(r=>parseFloat(r.utilization_pct));
+  const ooss=asc(r=>parseFloat(r.oos_pct));
+  const cpkms=asc(r=>n(r.total_cost_per_km));
+  const costs=asc(r=>getCost(r));
+  TH={ util:[p(utils,.33),p(utils,.66)], oos:[p(ooss,.33),p(ooss,.66)], cpkm:[p(cpkms,.33),p(cpkms,.66)], cost:[p(costs,.33),p(costs,.66)] };
 }
-function cfHigh(v) {
-  const n=parseFloat(v); if(isNaN(n))return '';
-  const lo=TH.util?.[0], hi=TH.util?.[1];
-  if(hi!=null&&n>=hi)return 'hi-green'; if(lo!=null&&n>=lo)return 'mid-yellow'; return 'lo-red';
-}
-function cfOOS(v) {
-  const n=parseFloat(v); if(isNaN(n))return '';
-  const lo=TH.oos?.[0], hi=TH.oos?.[1];
-  if(lo!=null&&n<=lo)return 'lo-green'; if(hi!=null&&n<=hi)return 'mid-yellow'; return 'hi-red';
-}
-function cfLow(v, th) {
-  if(!th)return '';
-  const n=parseFloat(String(v).replace(/[\u20b9%]/g,'')); if(isNaN(n))return '';
-  if(th[0]!=null&&n<=th[0])return 'lo-green'; if(th[1]!=null&&n<=th[1])return 'mid-yellow'; return 'hi-red';
-}
-function cfAvgBg(v) {
-  const n=parseFloat(v); if(isNaN(n))return '';
-  const lo=TH.cost?.[0], hi=TH.cost?.[1];
-  if(lo!=null&&n<=lo)return 'bg-green'; if(hi!=null&&n<=hi)return 'bg-yellow'; return 'bg-red';
-}
+function cfHi(v)  { const x=parseFloat(v); if(isNaN(x))return''; const[lo,hi]=TH.util||[]; return x>=(hi??80)?'hi-g':x>=(lo??60)?'mid-y':'lo-r'; }
+function cfOOS(v) { const x=parseFloat(v); if(isNaN(x))return''; const[lo,hi]=TH.oos||[]; return x<=(lo??3)?'lo-g':x<=(hi??8)?'mid-y':'hi-r'; }
+function cfLo(v,th){ if(!th)return''; const x=parseFloat(String(v).replace(/[₹%,]/g,'')); if(isNaN(x))return''; const[lo,hi]=th; return x<=(lo??0)?'lo-g':x<=(hi??0)?'mid-y':'hi-r'; }
+function cfBg(v)  { const x=parseFloat(v); if(isNaN(x))return''; const[lo,hi]=TH.cost||[]; return x<=(lo??0)?'bg-g':x<=(hi??0)?'bg-y':'bg-r'; }
 
 // ── RENDER ──
-function renderAll() { buildThresholds(); renderMatrix(); renderDetail(); }
+function renderAll(){ buildTH(); renderMatrix(); renderDetail(); }
 
 function renderMatrix() {
-  const groups={};
-  filtered.forEach(r=>{ const b=r.odometer_bucket||'No Data'; if(!groups[b])groups[b]=[]; groups[b].push(r); });
-  const buckets=ODO_ORDER.filter(b=>groups[b]);
+  const grp={};
+  filtered.forEach(r=>{ const b=r.odometer_bucket||'No Data'; if(!grp[b])grp[b]=[]; grp[b].push(r); });
+  const buckets=ODO_ORDER.filter(b=>grp[b]);
   document.getElementById('matrix-badge').textContent=buckets.length+' buckets';
   const tbody=document.getElementById('matrix-body'); tbody.innerHTML='';
+  const R=v=>'₹'+Number(v).toLocaleString('en-IN');
 
-  const makeRow=(label,rows,isTotal=false)=>{
-    const n=rows.length;
-    const tCost=rows.reduce((s,r)=>s+getCost(r),0), excl=rows.reduce((s,r)=>s+getExcl(r),0), wt=rows.reduce((s,r)=>s+getWT(r),0);
-    const odo=rows.reduce((s,r)=>s+num(r.filtered_odometer),0), revR=rows.reduce((s,r)=>s+num(r.rental_revenue),0), revA=rows.reduce((s,r)=>s+num(r.total_revenue),0);
-    const life=rows.reduce((s,r)=>s+num(r.total_life_days),0), active=rows.reduce((s,r)=>s+num(r.active_days),0), jc=rows.reduce((s,r)=>s+num(r.repair_frequency),0);
-    const utilP=life?(active/life*100).toFixed(1)+'%':'–';
+  const row=(label,rows,isTotal=false)=>{
+    const cnt=rows.length;
+    const tc=rows.reduce((s,r)=>s+getCost(r),0), ex=rows.reduce((s,r)=>s+getExcl(r),0), wt=rows.reduce((s,r)=>s+getWT(r),0);
+    const odo=rows.reduce((s,r)=>s+n(r.filtered_odometer),0);
+    const revR=rows.reduce((s,r)=>s+n(r.rental_revenue),0), revA=rows.reduce((s,r)=>s+n(r.total_revenue),0);
+    const life=rows.reduce((s,r)=>s+n(r.total_life_days),0), act=rows.reduce((s,r)=>s+n(r.active_days),0);
+    const jc=rows.reduce((s,r)=>s+n(r.repair_frequency),0);
+    const util=life?(act/life*100).toFixed(1)+'%':'–';
     const uptArr=rows.map(r=>parseFloat(r.uptime_pct||0)).filter(v=>!isNaN(v));
-    const avgUpt=uptArr.length?(uptArr.reduce((a,b)=>a+b,0)/uptArr.length).toFixed(1)+'%':'–';
-    const rl30=life?Math.round(revA/life*30):null, ra30=active?Math.round(revA/active*30):null;
-    const cpRev=revA?(tCost/revA*100).toFixed(1)+'%':'–', exRev=revA?(excl/revA*100).toFixed(1)+'%':'–', wtRev=revA?(wt/revA*100).toFixed(1)+'%':'–';
-    const jcPB=n?(jc/n).toFixed(2):'0.00', avgB=n?Math.round(tCost/n):0, exAvg=n?Math.round(excl/n):0, wtAvg=n?Math.round(wt/n):0;
-    const cpkm=odo?fmtK(tCost/odo):'–', exkm=odo?fmtK(excl/odo):'–', wtkm=odo?fmtK(wt/odo):'–';
-    const rupee=v=>'₹'+Number(v).toLocaleString('en-IN');
+    const upt=uptArr.length?(uptArr.reduce((a,b)=>a+b,0)/uptArr.length).toFixed(1)+'%':'–';
+    const rl=life?Math.round(revA/life*30):null, ra=act?Math.round(revA/act*30):null;
+    const cpR=revA?(tc/revA*100).toFixed(1)+'%':'–', exR=revA?(ex/revA*100).toFixed(1)+'%':'–', wtR=revA?(wt/revA*100).toFixed(1)+'%':'–';
+    const jcb=cnt?(jc/cnt).toFixed(2):'0.00', ab=cnt?Math.round(tc/cnt):0, exb=cnt?Math.round(ex/cnt):0, wtb=cnt?Math.round(wt/cnt):0;
+    const cpk=odo?fmtK(tc/odo):'–', exk=odo?fmtK(ex/odo):'–', wtk=odo?fmtK(wt/odo):'–';
     const tr=document.createElement('tr'); if(isTotal)tr.className='total-row';
     tr.innerHTML=`
-      <td>${label}</td><td>${fmt(n)}</td>
+      <td>${label}</td><td>${fmt(cnt)}</td>
       <td class="z-rev">${fmtL(revR)}</td><td class="z-rev">${fmtL(revA)}</td>
-      <td class="z-rev">${rl30?rupee(rl30):'–'}</td><td class="z-rev">${ra30?rupee(ra30):'–'}</td>
-      <td class="z-rev ${cfHigh(parseFloat(utilP))}">${utilP}</td>
-      <td class="z-cost">${fmtL(tCost)}</td>
-      <td class="z-cost ${cfLow(cpkm,TH.cpkm)}">${cpkm}</td>
-      <td class="z-cost">${jcPB}</td>
-      <td class="z-cost ${cfAvgBg(avgB)}">₹${fmt(avgB)}</td>
-      <td class="z-cost ${cfHigh(parseFloat(avgUpt))}">${avgUpt}</td>
-      <td class="z-cost ${cfLow(cpRev,[4,8])}">${cpRev}</td>
-      <td class="z-excl">${fmtL(excl)}</td>
-      <td class="z-excl ${cfLow(exkm,TH.cpkm)}">${exkm}</td>
-      <td class="z-excl">${jcPB}</td>
-      <td class="z-excl ${cfAvgBg(exAvg)}">₹${fmt(exAvg)}</td>
-      <td class="z-excl ${cfLow(exRev,[4,8])}">${exRev}</td>
+      <td class="z-rev">${rl?R(rl):'–'}</td><td class="z-rev">${ra?R(ra):'–'}</td>
+      <td class="z-rev ${cfHi(parseFloat(util))}">${util}</td>
+      <td class="z-cost">${fmtL(tc)}</td>
+      <td class="z-cost ${cfLo(cpk,TH.cpkm)}">${cpk}</td>
+      <td class="z-cost">${jcb}</td>
+      <td class="z-cost ${cfBg(ab)}">₹${fmt(ab)}</td>
+      <td class="z-cost ${cfHi(parseFloat(upt))}">${upt}</td>
+      <td class="z-cost ${cfLo(cpR,[4,8])}">${cpR}</td>
+      <td class="z-excl">${fmtL(ex)}</td>
+      <td class="z-excl ${cfLo(exk,TH.cpkm)}">${exk}</td>
+      <td class="z-excl">${jcb}</td>
+      <td class="z-excl ${cfBg(exb)}">₹${fmt(exb)}</td>
+      <td class="z-excl ${cfLo(exR,[4,8])}">${exR}</td>
       <td class="z-wt">${fmtL(wt)}</td>
-      <td class="z-wt ${cfLow(wtkm,TH.cpkm)}">${wtkm}</td>
-      <td class="z-wt">${jcPB}</td>
-      <td class="z-wt ${cfAvgBg(wtAvg)}">₹${fmt(wtAvg)}</td>
-      <td class="z-wt ${cfLow(wtRev,[4,8])}">${wtRev}</td>`;
+      <td class="z-wt ${cfLo(wtk,TH.cpkm)}">${wtk}</td>
+      <td class="z-wt">${jcb}</td>
+      <td class="z-wt ${cfBg(wtb)}">₹${fmt(wtb)}</td>
+      <td class="z-wt ${cfLo(wtR,[4,8])}">${wtR}</td>`;
     tbody.appendChild(tr);
   };
-  buckets.forEach(b=>makeRow(b,groups[b]));
-  if(filtered.length) makeRow('Overall',filtered,true);
+  buckets.forEach(b=>row(b,grp[b]));
+  if(filtered.length) row('Overall',filtered,true);
 }
 
 function renderDetail() {
   const total=detailData.length, pages=Math.max(1,Math.ceil(total/PER_PAGE));
   pg=Math.min(pg,pages);
-  const slice=detailData.slice((pg-1)*PER_PAGE,pg*PER_PAGE);
   document.getElementById('detail-badge').textContent=total.toLocaleString('en-IN')+' bikes';
   document.getElementById('page-info').textContent='Page '+pg+' of '+pages;
   document.getElementById('btn-prev').disabled=pg<=1;
   document.getElementById('btn-next').disabled=pg>=pages;
   const tbody=document.getElementById('detail-body'); tbody.innerHTML='';
-  for(const r of slice){
-    const cost=getCost(r), rev=num(r.total_revenue), cpct=rev?(cost/rev*100).toFixed(1)+'%':'–';
+  detailData.slice((pg-1)*PER_PAGE,pg*PER_PAGE).forEach(r=>{
+    const cost=getCost(r), rev=n(r.total_revenue), cpct=rev?(cost/rev*100).toFixed(1)+'%':'–';
     const cpkm=r.total_cost_per_km!=null?'₹'+parseFloat(r.total_cost_per_km).toFixed(2):'–';
-    const sc={RFD:'s-rfd',OOS:'s-oos',Active_rental:'s-active'}[r.status]||'s-other';
+    const sc={RFD:'p-rfd',OOS:'p-oos',Active_rental:'p-act'}[r.status]||'p-oth';
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td>${r.reg_number||'–'}</td><td>${r.city||'–'}</td><td>${r.hub_name||'–'}</td><td>${r.model_name||'–'}</td>
       <td>${r.odometer_bucket||'–'}</td><td>${fmt(r.current_odometer)}</td>
       <td>${r.active_days!=null?parseFloat(r.active_days).toFixed(1):'–'}</td>
-      <td class="${cfHigh(r.utilization_pct)}">${r.utilization_pct||'–'}</td>
+      <td class="${cfHi(r.utilization_pct)}">${r.utilization_pct||'–'}</td>
       <td class="${cfOOS(r.oos_pct)}">${r.oos_pct||'–'}</td>
-      <td class="${cfHigh(r.uptime_pct)}">${r.uptime_pct||'–'}</td>
-      <td>₹${fmt(cost)}</td><td>₹${fmt(num(r.part_cost))}</td><td>₹${fmt(num(r.labour_cost))}</td>
-      <td>₹${fmt(num(r.wear_tear_cost))}</td><td>₹${fmt(num(r.warranty_cost))}</td>
-      <td class="${cfLow(cpkm,TH.cpkm)}">${cpkm}</td>
+      <td class="${cfHi(r.uptime_pct)}">${r.uptime_pct||'–'}</td>
+      <td>₹${fmt(cost)}</td><td>₹${fmt(n(r.part_cost))}</td><td>₹${fmt(n(r.labour_cost))}</td>
+      <td>₹${fmt(n(r.wear_tear_cost))}</td><td>₹${fmt(n(r.warranty_cost))}</td>
+      <td class="${cfLo(cpkm,TH.cpkm)}">${cpkm}</td>
       <td>${fmt(r.repair_frequency)}</td>
-      <td>₹${fmt(num(r.rental_revenue))}</td><td>₹${fmt(num(r.total_revenue))}</td>
-      <td class="${cfLow(cpct,[4,8])}">${cpct}</td>`;
+      <td>₹${fmt(n(r.rental_revenue))}</td><td>₹${fmt(n(r.total_revenue))}</td>
+      <td class="${cfLo(cpct,[4,8])}">${cpct}</td>`;
     tbody.appendChild(tr);
-  }
+  });
 }
 
-function changePage(dir){ pg+=dir; renderDetail(); window.scrollTo({top:document.querySelector('.detail-table-wrap').offsetTop-20,behavior:'smooth'}); }
+function changePage(d){ pg+=d; renderDetail(); window.scrollTo({top:document.querySelector('.detail-table-wrap').offsetTop-20,behavior:'smooth'}); }
 
 function exportCSV(){
   const cols=['reg_number','city','hub_name','model_name','odometer_bucket','current_odometer','active_days','utilization_pct','oos_pct','uptime_pct','total_service_cost','part_cost','labour_cost','wear_tear_cost','warranty_cost','total_cost_per_km','repair_frequency','rental_revenue','total_revenue'];
@@ -444,6 +566,7 @@ function exportCSV(){
   a.download='fleet_km_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
 }
 
+// ── INIT ──
 populateMonths();
 load('all_time');
 </script>
