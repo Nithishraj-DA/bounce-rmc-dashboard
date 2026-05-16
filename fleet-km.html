@@ -215,9 +215,11 @@ async function load(month='all_time') {
   try {
     // Always read from Supabase — filter by month column
     const monthParam = encodeURIComponent(month);
+    // Fetch all rows for this month in one shot (max 10000)
+    const sbHeaders = { ...SB_HDR, 'Range': '0-9999', 'Prefer': 'count=none' };
     const res = await fetch(
       SB_URL + '/rest/v1/fleet_km_data?select=*&month=eq.' + monthParam + '&order=current_odometer.desc',
-      { headers: SB_HDR }
+      { headers: sbHeaders }
     );
     if (!res.ok) throw new Error('Supabase error ' + res.status);
     allData = await res.json();
