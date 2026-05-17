@@ -283,9 +283,16 @@ async function load(){
     document.getElementById("sync-lbl").textContent = "Error";
     return;
   }
-  data      = result.summary || [];
-  partsData = result.parts   || [];
-  if(!result || (!result.summary && !result.totals)){
+  // New response format: daily, by_sub, by_com, by_city, by_hub, by_model, parts
+  const daily    = result.daily    || [];
+  const by_sub   = result.by_sub   || [];
+  const by_com   = result.by_com   || [];
+  const by_city  = result.by_city  || [];
+  const by_hub   = result.by_hub   || [];
+  const by_model = result.by_model || [];
+  partsData      = result.parts    || [];
+  data = []; // legacy — not used for new format
+  if(!result || !result.totals){
     console.error("Unexpected response:", JSON.stringify(result||{}).slice(0,200));
     document.getElementById("kpis").innerHTML = `<div class="loading" style="grid-column:1/-1;color:var(--red)">⚠️ Error loading data</div>`;
     document.getElementById("sync-lbl").textContent = "Error";
@@ -328,58 +335,53 @@ async function load(){
       <div class="kpi-bar" style="background:linear-gradient(90deg,${k.ic}22,${k.ic}44)"></div>
     </div>`).join("");
 
-  // Daily trend
-  const bD = {};
-  data.forEach(r=>{const d=r.date||"";if(d)(bD[d]=bD[d]||[]).push(r);});
-  const dates = Object.keys(bD).sort();
+  // Daily trend — from pre-aggregated daily array
   mk("dailyChart","bar",{
-    labels: dates.map(d=>d.slice(5)),
+    labels: daily.map(d=>String(d.date).slice(5)),
     datasets:[
-      {type:"bar",  label:"Cost (₹)",  data:dates.map(d=>sm(bD[d],"total_cost")), backgroundColor:"rgba(37,99,235,.15)", borderColor:"#2563eb", borderWidth:1.5, yAxisID:"y"},
-      {type:"line", label:"Avg/JC (₹)",data:dates.map(d=>{const r=bD[d];const j=ujc(r);return j>0?sm(r,"total_cost")/j:0;}), borderColor:"#d97706", borderWidth:2, pointRadius:2, tension:.4, yAxisID:"y1", pointBackgroundColor:"#d97706"}
+      {type:"bar",  label:"Cost (₹)",  data:daily.map(d=>d.total_cost||0), backgroundColor:"rgba(37,99,235,.15)", borderColor:"#2563eb", borderWidth:1.5, yAxisID:"y"},
+      {type:"line", label:"Avg/JC (₹)",data:daily.map(d=>d.unique_jcs>0?d.total_cost/d.unique_jcs:0), borderColor:"#d97706", borderWidth:2, pointRadius:2, tension:.4, yAxisID:"y1", pointBackgroundColor:"#d97706"}
     ]
   },{scales:{y:{position:"left",ticks:{color:"#94a3b8",font:{size:9}},grid:{color:"rgba(0,0,0,.05)"}},y1:{position:"right",ticks:{color:"#94a3b8",font:{size:9}},grid:{drawOnChartArea:false}}}});
 
   // Submission donut
-  const bS = grp(data,"submission_type"), sK = Object.keys(bS);
-  mk("subChart","doughnut",{labels:sK,datasets:[{data:sK.map(k=>sm(bS[k],"total_cost")),backgroundColor:PAL,borderColor:"#fff",borderWidth:2}]},{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
+  mk("subChart","doughnut",{
+    labels:by_sub.map(r=>r.submission_type||'Unknown'),
+    datasets:[{data:by_sub.map(r=>r.total_cost||0),backgroundColor:PAL,borderColor:"#fff",borderWidth:2}]
+  },{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
 
   // Commodity donut
-  const bC = grp(data,"commodity"), cK = Object.keys(bC);
-  mk("comChart","doughnut",{labels:cK,datasets:[{data:cK.map(k=>sm(bC[k],"total_cost")),backgroundColor:["#2563eb","#16a34a","#d97706","#7c3aed"],borderColor:"#fff",borderWidth:2}]},{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
+  mk("comChart","doughnut",{
+    labels:by_com.map(r=>r.commodity||'Unknown'),
+    datasets:[{data:by_com.map(r=>r.total_cost||0),backgroundColor:["#2563eb","#16a34a","#d97706","#7c3aed","#0891b2"],borderColor:"#fff",borderWidth:2}]
+  },{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
 
   // City avg cost
-  const bCity = grp(data,"city"), cities = Object.keys(bCity);
-  mk("cityChart","bar",{labels:cities,datasets:[{label:"Avg/JC",data:cities.map(c=>{const r=bCity[c];const j=ujc(r);return j>0?sm(r,"total_cost")/j:0;}),backgroundColor:["#dc2626","#2563eb","#16a34a"],borderRadius:5,borderSkipped:false}]},{indexAxis:"y",plugins:{legend:{display:false}}});
+  mk("cityChart","bar",{
+    labels:by_city.map(r=>r.city||'Unknown'),
+    datasets:[{label:"Avg/JC",data:by_city.map(r=>r.unique_jcs>0?r.total_cost/r.unique_jcs:0),backgroundColor:["#f53b3b","#2563eb","#16a34a"],borderRadius:5,borderSkipped:false}]
+  },{indexAxis:"y",plugins:{legend:{display:false}}});
 
-  // Hub chart
-  const bH = grp(data,"hub_name");
-  const hubs = Object.keys(bH).sort((a,b)=>{
-    const avgA = ujc(bH[a])>0 ? sm(bH[a],"total_cost")/ujc(bH[a]) : 0;
-    const avgB = ujc(bH[b])>0 ? sm(bH[b],"total_cost")/ujc(bH[b]) : 0;
-    return avgB - avgA;
-  }).slice(0,10);
-  mk("hubChart","bar",{labels:hubs,datasets:[{label:"Cost",data:hubs.map(h=>sm(bH[h],"total_cost")),backgroundColor:PAL,borderRadius:5,borderSkipped:false}]},{indexAxis:"y",plugins:{legend:{display:false}}});
+  // Hub chart — top 10 by avg/JC
+  const top10hubs = [...by_hub].slice(0,10);
+  mk("hubChart","bar",{
+    labels:top10hubs.map(r=>r.hub_name||'Unknown'),
+    datasets:[{label:"Cost",data:top10hubs.map(r=>r.total_cost||0),backgroundColor:PAL,borderRadius:5,borderSkipped:false}]
+  },{indexAxis:"y",plugins:{legend:{display:false}}});
 
   // Hub table
-  const allH = Object.keys(bH).sort((a,b)=>{
-    const avgA = ujc(bH[a])>0 ? sm(bH[a],"total_cost")/ujc(bH[a]) : 0;
-    const avgB = ujc(bH[b])>0 ? sm(bH[b],"total_cost")/ujc(bH[b]) : 0;
-    return avgB - avgA;
-  });
-  document.getElementById("hub-count").textContent = `${allH.length} hubs`;
-  const maxC = Math.max(...allH.map(h=>sm(bH[h],"total_cost")));
+  document.getElementById("hub-count").textContent = `${by_hub.length} hubs`;
+  const maxC = Math.max(...by_hub.map(r=>r.total_cost||0));
   document.getElementById("hub-tbl").innerHTML = `
   <table><thead><tr><th>Hub</th><th>City</th><th>JCs</th><th>Total Cost</th><th>Part Cost</th><th>Labour Cost</th><th>Avg / JC ↓</th><th>Attach%</th></tr></thead>
-  <tbody>${allH.map(hub=>{
-    const r=bH[hub], c=r[0]?.city||"—", j=ujc(r), tc2=sm(r,"total_cost");
-    const pc2=sm(r,"part_cost"), lc2=sm(r,"labour_cost");
-    const av=j>0?tc2/j:0, at=j>0?sjp(r)/j*100:0;
-    const ct=c==="NCR"?"t-r":c==="Bangalore"?"t-b":"t-g";
+  <tbody>${by_hub.map(r=>{
+    const j=r.unique_jcs||0, tc2=r.total_cost||0, pc2=r.part_cost||0, lc2=r.labour_cost||0;
+    const av=j>0?tc2/j:0, at=j>0?(r.jcs_with_parts||0)/j*100:0;
+    const ct=r.city==="NCR"?"t-r":r.city==="Bangalore"?"t-b":"t-g";
     const avC=av>700?"var(--red)":av>400?"var(--amber)":"var(--green)";
     return`<tr>
-      <td><strong>${hub}</strong></td>
-      <td><span class="tag ${ct}">${c}</span></td>
+      <td><strong>${r.hub_name||'—'}</strong></td>
+      <td><span class="tag ${ct}">${r.city||'—'}</span></td>
       <td style="font-family:var(--mono);color:var(--text2)">${j}</td>
       <td><div class="bw"><span style="font-family:var(--mono)">${fmt(tc2)}</span><div class="bb"><div class="bf" style="width:${tc2/maxC*100}%"></div></div></div></td>
       <td style="font-family:var(--mono);color:var(--blue)">${fmt(pc2)}</td>
@@ -389,17 +391,15 @@ async function load(){
     </tr>`;
   }).join("")}</tbody></table>`;
 
-  // Model charts — use all data grouped by model
-  const bM = grp(data,"bike_model_name");
-  const models = Object.keys(bM).filter(m=>m&&m!=="null"&&m!=="undefined"&&m!=="Unknown");
-  if(models.length > 0){
+  // Model charts
+  if(by_model.length > 0){
     mk("modelChart","doughnut",{
-      labels:models,
-      datasets:[{data:models.map(m=>sm(bM[m],"total_cost")),backgroundColor:["#2563eb","#dc2626","#16a34a","#d97706"],borderColor:"#fff",borderWidth:2}]
+      labels:by_model.map(r=>r.bike_model_name),
+      datasets:[{data:by_model.map(r=>r.total_cost||0),backgroundColor:["#2563eb","#f53b3b","#16a34a","#d97706"],borderColor:"#fff",borderWidth:2}]
     },{plugins:{legend:{position:"right",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
     mk("modelAvgChart","bar",{
-      labels:models,
-      datasets:[{label:"Avg/JC (₹)",data:models.map(m=>{const r=bM[m];const j=ujc(r);return j>0?sm(r,"total_cost")/j:0;}),backgroundColor:["#2563eb","#dc2626","#16a34a","#d97706"],borderRadius:5,borderSkipped:false}]
+      labels:by_model.map(r=>r.bike_model_name),
+      datasets:[{label:"Avg/JC (₹)",data:by_model.map(r=>r.unique_jcs>0?r.total_cost/r.unique_jcs:0),backgroundColor:["#2563eb","#f53b3b","#16a34a","#d97706"],borderRadius:5,borderSkipped:false}]
     },{indexAxis:"y",plugins:{legend:{display:false}}});
   }
 
