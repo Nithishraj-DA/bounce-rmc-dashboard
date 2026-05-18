@@ -427,6 +427,11 @@ async function load(){
       <td style="font-family:var(--mono);color:${cum<50?"var(--green)":cum<80?"var(--amber)":"var(--muted)"}">${cum.toFixed(1)}%</td>
     </tr>`;
   }).join("")}</tbody></table>`;
+  } catch(err) {
+    console.error("Dashboard error:", err);
+    document.getElementById("kpis").innerHTML = `<div class="loading" style="grid-column:1/-1;color:var(--red)">⚠️ Error: ${err.message}</div>`;
+    document.getElementById("sync-lbl").textContent = "Error";
+  }
 }
 
 
