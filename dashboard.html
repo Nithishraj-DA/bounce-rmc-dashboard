@@ -54,6 +54,7 @@
 
 /* Charts */
 .g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.g3e{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .cbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .15s}
 .cbox:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
@@ -161,7 +162,7 @@ tbody tr:last-child td{border-bottom:none}
       <!-- City + Hub + Model -->
       <div>
         <div class="sh">City, Hub &amp; Model</div>
-        <div class="g3">
+        <div class="g3e">
           <div class="cbox"><div class="ct">Avg Cost / JC by City</div><canvas id="cityChart" height="110"></canvas></div>
           <div class="cbox"><div class="ct">Top 10 Hubs by Cost</div><canvas id="hubChart" height="110"></canvas></div>
           <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelAvgChart" height="110"></canvas></div>
