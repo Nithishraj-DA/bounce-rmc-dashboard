@@ -419,7 +419,7 @@ async function load(){
   }});
 
   // City — sort desc by total cost, rich tooltip
-  const by_city_s = [...by_city].sort((a,b)=>((b.total_cost||0)/Math.max(b.unique_jcs||1,1))-((a.total_cost||0)/Math.max(a.unique_jcs||1,1)));
+  const by_city_s = [...by_city].sort((a,b)=>(b.total_cost||0)-(a.total_cost||0));
   mk("cityChart","bar",{
     labels:by_city_s.map(r=>r.city||'Unknown'),
     datasets:[{label:"Avg/JC",data:by_city_s.map(r=>r.unique_jcs>0?Math.round(r.total_cost/r.unique_jcs):0),
