@@ -53,7 +53,7 @@
 .kpi-bar{height:3px;border-radius:2px;margin-top:10px}
 
 /* Charts */
-.g3{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:16px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .cbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:box-shadow .15s}
 .cbox:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
@@ -155,16 +155,16 @@ tbody tr:last-child td{border-bottom:none}
           <div class="cbox"><div class="ct">Daily Cost + Avg/JC</div><canvas id="dailyChart" height="130"></canvas></div>
           <div class="cbox"><div class="ct">By Submission Type</div><canvas id="subChart" height="130"></canvas></div>
           <div class="cbox"><div class="ct">By Commodity</div><canvas id="comChart" height="130"></canvas></div>
-          <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelAvgChart" height="130"></canvas></div>
         </div>
       </div>
 
-      <!-- City + Hub -->
+      <!-- City + Hub + Model -->
       <div>
-        <div class="sh">City &amp; Hub</div>
-        <div class="g2">
+        <div class="sh">City, Hub &amp; Model</div>
+        <div class="g3">
           <div class="cbox"><div class="ct">Avg Cost / JC by City</div><canvas id="cityChart" height="110"></canvas></div>
           <div class="cbox"><div class="ct">Top 10 Hubs by Cost</div><canvas id="hubChart" height="110"></canvas></div>
+          <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelAvgChart" height="110"></canvas></div>
         </div>
       </div>
 
