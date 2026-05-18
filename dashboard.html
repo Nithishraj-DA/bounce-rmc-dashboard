@@ -198,8 +198,8 @@ tbody tr:last-child td{border-bottom:none}
   </div><!-- /content -->
 </div><!-- /main -->
 
+
 <script>
-JSEOF
 const SB   = "https://fuslpeyhpmofzijrotkb.supabase.co";
 const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs";
 const HDR  = {apikey:ANON,Authorization:`Bearer ${ANON}`};
@@ -456,13 +456,12 @@ function toggleSidebar() {
   }
 })();
 
-document.addEventListener("DOMContentLoaded", function(){
-  const today = new Date().toISOString().slice(0,10);
-  const jan1  = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
-  document.getElementById('f-start').value = jan1;
-  document.getElementById('f-end').value   = today;
-  load();
-});
+// Script is at end of body — DOM is ready, call directly
+const _today = new Date().toISOString().slice(0,10);
+const _jan1  = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+document.getElementById('f-start').value = _jan1;
+document.getElementById('f-end').value   = _today;
+load();
 </script>
 </body>
 </html>
