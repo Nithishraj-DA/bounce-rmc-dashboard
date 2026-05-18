@@ -180,8 +180,8 @@ tbody tr:last-child td{border-bottom:none}
       <div>
         <div class="sh">Model Split</div>
         <div class="g2">
-          <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelChart" height="60"></canvas></div>
-          <div class="cbox"><div class="ct">Avg Cost / JC by Model</div><canvas id="modelAvgChart" height="60"></canvas></div>
+          <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelChart" height="45"></canvas></div>
+          <div class="cbox"><div class="ct">Avg Cost / JC by Model</div><canvas id="modelAvgChart" height="45"></canvas></div>
         </div>
       </div>
 
@@ -214,6 +214,27 @@ const fmt = n => {
   if(n>=1000)     return `₹${(n/1000).toFixed(1)}K`;
   return `₹${Math.round(n)}`;
 };
+// Currency without decimals, comma-separated Indian format
+const fmtC = n => n==null||isNaN(n) ? '—' : '₹'+Math.round(n).toLocaleString('en-IN');
+// Rich tooltip plugin for Chart.js (Cost + Avg/JC + No.of JC)
+function richTooltip(dataArr) {
+  return {
+    callbacks: {
+      label: () => null,
+      afterBody: (items) => {
+        const i = items[0].dataIndex;
+        const r = dataArr[i] || {};
+        const tc = r.total_cost || 0;
+        const jc = r.unique_jcs || 1;
+        return [
+          `Cost:   ${fmtC(tc)}`,
+          `Avg/JC: ${fmtC(tc/jc)}`,
+          `No. JC: ${jc.toLocaleString('en-IN')}`
+        ];
+      }
+    }
+  };
+}
 const grp = (arr,k) => arr.reduce((a,r)=>{const v=r[k]||"Unknown";(a[v]=a[v]||[]).push(r);return a;},{});
 const sm  = (arr,k) => arr.reduce((s,r)=>s+(parseFloat(r[k])||0),0);
 const ujc = arr => arr.reduce((s,r)=>s+(parseInt(r.unique_jcs)||0),0);
@@ -338,39 +359,108 @@ async function load(){
       <div class="kpi-bar" style="background:linear-gradient(90deg,${k.ic}22,${k.ic}44)"></div>
     </div>`).join("");
 
-  // Daily trend — from pre-aggregated daily array
+  // Daily trend — Cost bars + Avg/JC line + No.of JC line
   mk("dailyChart","bar",{
     labels: daily.map(d=>String(d.date).slice(5)),
     datasets:[
-      {type:"bar",  label:"Cost (₹)",  data:daily.map(d=>d.total_cost||0), backgroundColor:"rgba(37,99,235,.15)", borderColor:"#2563eb", borderWidth:1.5, yAxisID:"y"},
-      {type:"line", label:"Avg/JC (₹)",data:daily.map(d=>d.unique_jcs>0?d.total_cost/d.unique_jcs:0), borderColor:"#d97706", borderWidth:2, pointRadius:2, tension:.4, yAxisID:"y1", pointBackgroundColor:"#d97706"}
+      {type:"bar",  label:"Total Cost",  data:daily.map(d=>d.total_cost||0),
+        backgroundColor:"rgba(37,99,235,.15)", borderColor:"#2563eb", borderWidth:1.5, yAxisID:"y"},
+      {type:"line", label:"Avg/JC (₹)",  data:daily.map(d=>d.unique_jcs>0?Math.round(d.total_cost/d.unique_jcs):0),
+        borderColor:"#d97706", borderWidth:2, pointRadius:2, tension:.4, yAxisID:"y1",
+        pointBackgroundColor:"#d97706", fill:false},
+      {type:"line", label:"No. of JC",   data:daily.map(d=>d.unique_jcs||0),
+        borderColor:"#16a34a", borderWidth:2, pointRadius:2, tension:.4, yAxisID:"y2",
+        pointBackgroundColor:"#16a34a", borderDash:[4,2], fill:false}
     ]
-  },{scales:{y:{position:"left",ticks:{color:"#94a3b8",font:{size:9}},grid:{color:"rgba(0,0,0,.05)"}},y1:{position:"right",ticks:{color:"#94a3b8",font:{size:9}},grid:{drawOnChartArea:false}}}});
+  },{
+    scales:{
+      y: {position:"left",  ticks:{color:"#94a3b8",font:{size:9}},grid:{color:"rgba(0,0,0,.05)"},title:{display:true,text:"Cost (₹)",color:"#94a3b8",font:{size:9}}},
+      y1:{position:"right", ticks:{color:"#d97706",font:{size:9}},grid:{drawOnChartArea:false},title:{display:true,text:"Avg/JC",color:"#d97706",font:{size:9}}},
+      y2:{position:"right", ticks:{color:"#16a34a",font:{size:9}},grid:{drawOnChartArea:false},title:{display:true,text:"No. JC",color:"#16a34a",font:{size:9}},
+          offset:true}
+    },
+    plugins:{
+      legend:{labels:{color:"#64748b",font:{size:9},boxWidth:12}},
+      tooltip:{callbacks:{
+        afterTitle: ()=>null,
+        label: (ctx)=>{
+          const i=ctx.dataIndex, d=daily[i];
+          if(ctx.datasetIndex===0) return `  Cost:    ${fmtC(d.total_cost)}`;
+          if(ctx.datasetIndex===1) return `  Avg/JC:  ${fmtC(d.unique_jcs>0?d.total_cost/d.unique_jcs:0)}`;
+          return `  No. JC:  ${(d.unique_jcs||0).toLocaleString('en-IN')}`;
+        }
+      }}
+    }
+  });
 
-  // Submission donut
+  // Submission donut — rich tooltip
   mk("subChart","doughnut",{
     labels:by_sub.map(r=>r.submission_type||'Unknown'),
     datasets:[{data:by_sub.map(r=>r.total_cost||0),backgroundColor:PAL,borderColor:"#fff",borderWidth:2}]
-  },{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
+  },{plugins:{
+    legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}},
+    tooltip:{callbacks:{
+      label: (ctx)=>{
+        const r=by_sub[ctx.dataIndex]||{};
+        const tc=r.total_cost||0, jc=r.unique_jcs||1;
+        return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+      }
+    }}
+  }});
 
-  // Commodity donut
+  // Commodity donut — rich tooltip
   mk("comChart","doughnut",{
     labels:by_com.map(r=>r.commodity||'Unknown'),
     datasets:[{data:by_com.map(r=>r.total_cost||0),backgroundColor:["#2563eb","#16a34a","#d97706","#7c3aed","#0891b2"],borderColor:"#fff",borderWidth:2}]
-  },{plugins:{legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
+  },{plugins:{
+    legend:{position:"bottom",labels:{color:"#64748b",font:{size:9},boxWidth:10}},
+    tooltip:{callbacks:{
+      label:(ctx)=>{
+        const r=by_com[ctx.dataIndex]||{};
+        const tc=r.total_cost||0, jc=r.unique_jcs||1;
+        return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+      }
+    }}
+  }});
 
-  // City avg cost
+  // City — sort desc by total cost, rich tooltip
+  const by_city_s = [...by_city].sort((a,b)=>(b.total_cost||0)-(a.total_cost||0));
   mk("cityChart","bar",{
-    labels:by_city.map(r=>r.city||'Unknown'),
-    datasets:[{label:"Avg/JC",data:by_city.map(r=>r.unique_jcs>0?r.total_cost/r.unique_jcs:0),backgroundColor:["#f53b3b","#2563eb","#16a34a"],borderRadius:5,borderSkipped:false}]
-  },{indexAxis:"y",plugins:{legend:{display:false}}});
+    labels:by_city_s.map(r=>r.city||'Unknown'),
+    datasets:[{label:"Avg/JC",data:by_city_s.map(r=>r.unique_jcs>0?Math.round(r.total_cost/r.unique_jcs):0),
+      backgroundColor:["#f53b3b","#2563eb","#16a34a"],borderRadius:5,borderSkipped:false}]
+  },{
+    indexAxis:"y",
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{
+        label:(ctx)=>{
+          const r=by_city_s[ctx.dataIndex]||{};
+          const tc=r.total_cost||0,jc=r.unique_jcs||1;
+          return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+        }
+      }}
+    }
+  });
 
-  // Hub chart — top 10 by avg/JC
-  const top10hubs = [...by_hub].slice(0,10);
+  // Hub chart — top 10 sorted desc by total cost, rich tooltip
+  const top10hubs = [...by_hub].sort((a,b)=>(b.total_cost||0)-(a.total_cost||0)).slice(0,10);
   mk("hubChart","bar",{
     labels:top10hubs.map(r=>r.hub_name||'Unknown'),
     datasets:[{label:"Cost",data:top10hubs.map(r=>r.total_cost||0),backgroundColor:PAL,borderRadius:5,borderSkipped:false}]
-  },{indexAxis:"y",plugins:{legend:{display:false}}});
+  },{
+    indexAxis:"y",
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{
+        label:(ctx)=>{
+          const r=top10hubs[ctx.dataIndex]||{};
+          const tc=r.total_cost||0,jc=r.unique_jcs||1;
+          return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+        }
+      }}
+    }
+  });
 
   // Hub table
   document.getElementById("hub-count").textContent = `${by_hub.length} hubs`;
@@ -394,16 +484,38 @@ async function load(){
     </tr>`;
   }).join("")}</tbody></table>`;
 
-  // Model charts
+  // Model charts — rich tooltip
   if(by_model.length > 0){
     mk("modelChart","doughnut",{
       labels:by_model.map(r=>r.bike_model_name),
       datasets:[{data:by_model.map(r=>r.total_cost||0),backgroundColor:["#2563eb","#f53b3b","#16a34a","#d97706"],borderColor:"#fff",borderWidth:2}]
-    },{plugins:{legend:{position:"right",labels:{color:"#64748b",font:{size:9},boxWidth:10}}}});
+    },{plugins:{
+      legend:{position:"right",labels:{color:"#64748b",font:{size:9},boxWidth:10}},
+      tooltip:{callbacks:{
+        label:(ctx)=>{
+          const r=by_model[ctx.dataIndex]||{};
+          const tc=r.total_cost||0,jc=r.unique_jcs||1;
+          return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+        }
+      }}
+    }});
     mk("modelAvgChart","bar",{
       labels:by_model.map(r=>r.bike_model_name),
-      datasets:[{label:"Avg/JC (₹)",data:by_model.map(r=>r.unique_jcs>0?r.total_cost/r.unique_jcs:0),backgroundColor:["#2563eb","#f53b3b","#16a34a","#d97706"],borderRadius:5,borderSkipped:false}]
-    },{indexAxis:"y",plugins:{legend:{display:false}}});
+      datasets:[{label:"Avg/JC (₹)",data:by_model.map(r=>r.unique_jcs>0?Math.round(r.total_cost/r.unique_jcs):0),
+        backgroundColor:["#2563eb","#f53b3b","#16a34a","#d97706"],borderRadius:5,borderSkipped:false}]
+    },{
+      indexAxis:"y",
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{
+          label:(ctx)=>{
+            const r=by_model[ctx.dataIndex]||{};
+            const tc=r.total_cost||0,jc=r.unique_jcs||1;
+            return [` Cost:   ${fmtC(tc)}`,` Avg/JC: ${fmtC(tc/jc)}`,` No. JC: ${jc.toLocaleString('en-IN')}`];
+          }
+        }}
+      }
+    });
   }
 
   // Parts table
