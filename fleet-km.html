@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fleet KM Analysis — Bounce Ops</title>
 <link rel="stylesheet" href="bounce-theme.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 /* ── FLEET KM ANALYSIS PAGE STYLES ── */
 
@@ -50,7 +51,7 @@ body{display:flex}
 .section-controls{display:flex;align-items:center;gap:8px}
 .search-wrap{position:relative}
 .search-wrap input{padding:6px 10px 6px 30px;width:190px}
-.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px}
+.si{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
 .export-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;transition:all .15s}
 .export-btn:hover{color:var(--text);border-color:var(--text)}
 
@@ -115,17 +116,17 @@ td:nth-child(2){min-width:55px}
   <div class="sb-brand">
     <img class="sb-logo-img" src="https://bouncedaily.in/logo  (1).png"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="Bounce">
-    <div class="sb-logo-fallback" style="display:none">⚡</div>
+    <div class="sb-logo-fallback" style="display:none"><i class="ti ti-brand-battery" style="font-size:16px;color:#fff"></i></div>
     <div class="sb-text">
       <div class="sb-name">Bounce <span>Ops</span></div>
     </div>
   </div>
   <div class="sb-sec">Analytics</div>
   <a class="sb-item " href="dashboard.html" data-tip="RMC Dashboard">
-    <span class="sb-icon">📊</span><span class="sb-label">RMC Dashboard</span>
+    <i class="ti ti-chart-bar sb-icon" aria-hidden="true" style="font-size:15px;width:18px;text-align:center;flex-shrink:0"></i><span class="sb-label">RMC Dashboard</span>
   </a>
   <a class="sb-item active" href="fleet-km.html" data-tip="Fleet KM Analysis">
-    <span class="sb-icon">🏍️</span><span class="sb-label">Fleet KM Analysis</span>
+    <i class="ti ti-motorbike sb-icon" aria-hidden="true" style="font-size:15px;width:18px;text-align:center;flex-shrink:0"></i><span class="sb-label">Fleet KM Analysis</span>
   </a>
   <div class="sb-spacer"></div>
   <div class="sb-foot">
@@ -139,7 +140,7 @@ td:nth-child(2){min-width:55px}
 <!-- FILTERS -->
 <div style="display:flex;align-items:center;justify-content:flex-end;padding:8px 24px;background:#ffffff;border-bottom:1px solid #e5e9f0;gap:12px;flex-shrink:0">
   <span style="font-size:11px;color:var(--muted2)" id="sync-ts"></span>
-  <button style="background:transparent;border:1px solid var(--bounce-border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer" id="sync-btn" onclick="triggerSync()">🔄 Sync Now</button>
+  <button style="background:transparent;border:1px solid var(--bounce-border);color:var(--muted);padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer" id="sync-btn" onclick="triggerSync()"><i class="ti ti-refresh" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Sync Now</button>
 </div>
 <div class="filter-bar">
   <div class="fg">
@@ -195,7 +196,7 @@ td:nth-child(2){min-width:55px}
     <!-- MATRIX -->
     <div class="section-header">
       <div class="section-title">
-        <span>KM Cohort Summary</span>
+        <i class="ti ti-layers-intersect" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--muted)"></i><span>KM Cohort Summary</span>
         <span class="badge" id="matrix-badge">–</span>
       </div>
     </div>
@@ -224,15 +225,15 @@ td:nth-child(2){min-width:55px}
     <!-- DETAIL -->
     <div class="section-header" style="margin-top:4px">
       <div class="section-title">
-        <span>Bike Level Detail</span>
+        <i class="ti ti-list-details" style="font-size:14px;vertical-align:-2px;margin-right:5px;color:var(--muted)"></i><span>Bike Level Detail</span>
         <span class="badge" id="detail-badge">–</span>
       </div>
       <div class="section-controls">
         <div class="search-wrap">
-          <span class="si">🔍</span>
+          <i class="ti ti-search si" aria-hidden="true" style="font-size:13px"></i>
           <input type="text" id="bike-search" placeholder="Search reg / hub…" oninput="filterDetail()">
         </div>
-        <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="export-btn" onclick="exportCSV()"><i class="ti ti-table-export" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Export CSV</button>
       </div>
     </div>
     <div class="detail-table-wrap">
@@ -306,7 +307,7 @@ async function load(month) {
 
     const sel = document.getElementById('f-month');
     const label = sel.options[sel.selectedIndex]?.text || month;
-    document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb">✅ Supabase</span>';
+    document.getElementById('mode-badge').innerHTML = '<span class="mode-badge mode-sb"><i class="ti ti-database" style="font-size:12px;vertical-align:-2px;margin-right:4px"></i>Supabase</span>';
     document.getElementById('data-info').textContent = allData.length.toLocaleString('en-IN') + ' bikes · ' + label;
 
     populateHubs(document.getElementById('f-city').value);
@@ -329,11 +330,11 @@ async function triggerSync() {
     const r = await fetch(SYNC_FN, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({months:[month,'all_time']})});
     const d = await r.json();
     if (d.success) {
-      btn.textContent = '✅ Done!';
-      setTimeout(() => { btn.textContent='🔄 Sync Now'; btn.disabled=false; load(month); }, 1500);
+      btn.innerHTML = '<i class="ti ti-check" style="font-size:12px;vertical-align:-2px;margin-right:3px"></i>Done!';
+      setTimeout(() => { btn.textContent='<i class="ti ti-refresh" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Sync Now'; btn.disabled=false; load(month); }, 1500);
     } else throw new Error(d.error);
   } catch(e) {
-    btn.textContent='❌ Failed'; setTimeout(()=>{ btn.textContent='🔄 Sync Now'; btn.disabled=false; }, 2000);
+    btn.innerHTML='<i class="ti ti-x" style="font-size:12px;vertical-align:-2px;margin-right:3px"></i>Failed'; setTimeout(()=>{ btn.textContent='<i class="ti ti-refresh" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Sync Now'; btn.disabled=false; }, 2000);
   }
 }
 

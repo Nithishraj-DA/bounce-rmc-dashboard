@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>RMC Cost Dashboard — Bounce Ops</title>
 <link rel="stylesheet" href="bounce-theme.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 /* ── RMC DASHBOARD PAGE STYLES ── */
@@ -83,15 +84,15 @@ tbody tr:last-child td{border-bottom:none}
   <div class="sb-brand">
     <img class="sb-logo-img" src="https://bouncedaily.in/logo  (1).png"
          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="Bounce">
-    <div class="sb-logo-fallback" style="display:none">⚡</div>
+    <div class="sb-logo-fallback" style="display:none"><i class="ti ti-brand-battery" style="font-size:16px;color:#fff"></i></div>
     <div class="sb-text"><div class="sb-name">Bounce <span>Ops</span></div></div>
   </div>
   <div class="sb-sec">Analytics</div>
   <a class="sb-item active" href="dashboard.html" data-tip="RMC Dashboard">
-    <span class="sb-icon">📊</span><span class="sb-label">RMC Dashboard</span>
+    <i class="ti ti-chart-bar sb-icon" aria-hidden="true" style="font-size:15px;width:18px;text-align:center;flex-shrink:0"></i><span class="sb-label">RMC Dashboard</span>
   </a>
   <a class="sb-item" href="fleet-km.html" data-tip="Fleet KM Analysis">
-    <span class="sb-icon">🏍️</span><span class="sb-label">Fleet KM Analysis</span>
+    <i class="ti ti-motorbike sb-icon" aria-hidden="true" style="font-size:15px;width:18px;text-align:center;flex-shrink:0"></i><span class="sb-label">Fleet KM Analysis</span>
   </a>
   <div class="sb-spacer"></div>
   <div class="sb-foot">
@@ -143,7 +144,7 @@ tbody tr:last-child td{border-bottom:none}
       <div class="fl"><span class="fl-l">Type</span>
         <select id="f-line"><option value="">All</option><option value="Part">Part</option><option value="Labour">Labour</option></select>
       </div>
-      <button class="clear-btn" onclick="clearF()">✕ Clear</button>
+      <button class="clear-btn" onclick="clearF()"><i class="ti ti-x" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Clear</button>
     </div>
 
     <!-- INNER CONTENT -->
@@ -336,12 +337,12 @@ async function load(){
 
   // KPIs
   const KPIS = [
-    {l:"Total Cost",    v:fmt(tc),              s:"Part + Labour",      icon:"💰", bg:"#eff6ff", ic:"#2563eb"},
-    {l:"Part Cost",     v:fmt(pc),              s:pc>0?(pc/tc*100).toFixed(1)+"% of total":"—", icon:"🔩", bg:"#f0fdf4", ic:"#16a34a"},
-    {l:"Labour Cost",   v:fmt(lc),              s:lc>0?(lc/tc*100).toFixed(1)+"% of total":"—", icon:"🔧", bg:"#faf5ff", ic:"#7c3aed"},
-    {l:"Unique JCs",    v:jcs.toLocaleString(), s:"Job cards",          icon:"📋", bg:"#fffbeb", ic:"#d97706"},
-    {l:"Avg / JC",      v:`₹${Math.round(avg)}`,s:"All line items",    icon:"📈", bg:"#fffbeb", ic:"#d97706"},
-    {l:"Part Attach",   v:`${att.toFixed(1)}%`, s:`${pjc} JCs w/ parts`,icon:"🎯",bg:"#f0fdf4", ic:"#16a34a"},
+    {l:"Total Cost",    v:fmt(tc),              s:"Part + Labour",      icon:'<i class="ti ti-cash" style="font-size:16px"></i>', bg:"#eff6ff", ic:"#2563eb"},
+    {l:"Part Cost",     v:fmt(pc),              s:pc>0?(pc/tc*100).toFixed(1)+"% of total":"—", icon:'<i class="ti ti-components" style="font-size:16px"></i>', bg:"#f0fdf4", ic:"#16a34a"},
+    {l:"Labour Cost",   v:fmt(lc),              s:lc>0?(lc/tc*100).toFixed(1)+"% of total":"—", icon:'<i class="ti ti-tool" style="font-size:16px"></i>', bg:"#faf5ff", ic:"#7c3aed"},
+    {l:"Unique JCs",    v:jcs.toLocaleString(), s:"Job cards",          icon:'<i class="ti ti-clipboard-list" style="font-size:16px"></i>', bg:"#fffbeb", ic:"#d97706"},
+    {l:"Avg / JC",      v:`₹${Math.round(avg)}`,s:"All line items",    icon:'<i class="ti ti-chart-bar" style="font-size:16px"></i>', bg:"#fffbeb", ic:"#d97706"},
+    {l:"Part Attach",   v:`${att.toFixed(1)}%`, s:`${pjc} JCs w/ parts`,icon:'<i class="ti ti-paperclip" style="font-size:16px"></i>',bg:"#f0fdf4", ic:"#16a34a"},
   ];
   document.getElementById("kpis").innerHTML = KPIS.map(k=>`
     <div class="kpi">
