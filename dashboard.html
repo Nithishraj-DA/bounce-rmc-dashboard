@@ -164,7 +164,7 @@ tbody tr:last-child td{border-bottom:none}
       <div>
         <div class="sh">City, Hub &amp; Model</div>
         <div class="g3e">
-          <div class="cbox"><div class="ct">Avg Cost / JC by City</div><canvas id="cityChart" height="160"></canvas></div>
+          <div class="cbox"><div class="ct">Total Cost by City</div><canvas id="cityChart" height="160"></canvas></div>
           <div class="cbox"><div class="ct">Top 10 Hubs by Cost</div><canvas id="hubChart" height="160"></canvas></div>
           <div class="cbox"><div class="ct">Total Cost by Model</div><canvas id="modelAvgChart" height="160"></canvas></div>
         </div>
@@ -338,7 +338,7 @@ async function load(){
   // KPIs
   const KPIS = [
     {l:"Total Cost",    v:fmt(tc),              s:"Part + Labour",      icon:'<i class="ti ti-cash" style="font-size:16px"></i>', bg:"#eff6ff", ic:"#2563eb"},
-    {l:"Part Cost",     v:fmt(pc),              s:pc>0?(pc/tc*100).toFixed(1)+"% of total":"—", icon:'<i class="ti ti-components" style="font-size:16px"></i>', bg:"#f0fdf4", ic:"#16a34a"},
+    {l:"Part Cost",     v:fmt(pc),              s:pc>0?(pc/tc*100).toFixed(1)+"% of total":"—", icon:'<i class="ti ti-tools" style="font-size:16px"></i>', bg:"#f0fdf4", ic:"#16a34a"},
     {l:"Labour Cost",   v:fmt(lc),              s:lc>0?(lc/tc*100).toFixed(1)+"% of total":"—", icon:'<i class="ti ti-tool" style="font-size:16px"></i>', bg:"#faf5ff", ic:"#7c3aed"},
     {l:"Unique JCs",    v:jcs.toLocaleString(), s:"Job cards",          icon:'<i class="ti ti-clipboard-list" style="font-size:16px"></i>', bg:"#fffbeb", ic:"#d97706"},
     {l:"Avg / JC",      v:`₹${Math.round(avg)}`,s:"All line items",    icon:'<i class="ti ti-chart-bar" style="font-size:16px"></i>', bg:"#fffbeb", ic:"#d97706"},
@@ -423,7 +423,7 @@ async function load(){
   const by_city_s = [...by_city].sort((a,b)=>(b.total_cost||0)-(a.total_cost||0));
   mk("cityChart","bar",{
     labels:by_city_s.map(r=>r.city||'Unknown'),
-    datasets:[{label:"Avg/JC",data:by_city_s.map(r=>r.unique_jcs>0?Math.round(r.total_cost/r.unique_jcs):0),
+    datasets:[{label:"Total Cost",data:by_city_s.map(r=>r.total_cost||0),
       backgroundColor:["#f53b3b","#2563eb","#16a34a"],borderRadius:5,borderSkipped:false}]
   },{
     indexAxis:"y",
