@@ -473,11 +473,27 @@ async function loadOemRows() {
       }
     });
 
+    // Fetch current odo for active OEM bikes in this batch
+    const activeChassis = Object.entries(byChass)
+      .filter(([, {replacement}]) => !replacement)
+      .map(([chassis]) => chassis);
+    let oemOdoMap = {};
+    if (activeChassis.length) {
+      const oemBikes = await sbFetch(
+        `bike_fleet?select=chassis_number,current_odometer&chassis_number=in.(${activeChassis.map(c=>`"${c}"`).join(',')})`
+      );
+      oemBikes.forEach(b => oemOdoMap[b.chassis_number] = b.current_odometer);
+    }
+
     Object.entries(byChass).forEach(([chassis, {fitment: first, replacement: second}]) => {
-      if (!first) return; // no fitment found, skip
-      const kmOnPart = second
-        ? Math.max(0, second.bike_odo - first.bike_odo)
-        : null; // still active for OEM too if only one JC
+      if (!first) return;
+      let kmOnPart = 0;
+      if (second) {
+        kmOnPart = Math.max(0, second.bike_odo - first.bike_odo);
+      } else {
+        const curOdo = oemOdoMap[chassis] || 0;
+        kmOnPart = Math.max(0, curOdo - first.bike_odo);
+      }
 
       const city = first.city === 'Bangalore' ? 'Bangalore' : first.city === 'NCR' ? 'NCR' : first.city === 'Hyderabad' ? 'Hyderabad' : first.city;
 
@@ -492,7 +508,7 @@ async function loadOemRows() {
         km_at_fitment: first.bike_odo,
         replacement_date: second ? second.start_time?.slice(0,10) : null,
         km_at_replacement: second ? second.bike_odo : null,
-        km_on_part: kmOnPart !== null ? kmOnPart : 0,
+        km_on_part: kmOnPart,
         status: second ? 'Replaced' : 'Active',
         city: city || '—',
         hub: first.hub_name || '—'
@@ -550,7 +566,7 @@ function renderKpis() {
   let beating = 0;
   cats.forEach(cat => {
     const tRows = test.filter(r => r.part_category === cat && r.km_on_part > 0);
-    const oRows = oem.filter(r => r.part_category === cat && r.status === 'Replaced' && r.km_on_part > 0);
+    const oRows = oem.filter(r => r.part_category === cat && r.km_on_part > 0);
     if (!tRows.length || !oRows.length) return;
     const tAvg = avg(tRows.map(r => r.km_on_part));
     const oAvg = avg(oRows.map(r => r.km_on_part));
@@ -579,7 +595,7 @@ function renderSummary() {
   let maxKm = 0;
   cats.forEach(cat => {
     const tAvg = avg(test.filter(r=>r.part_category===cat&&r.km_on_part>0).map(r=>r.km_on_part));
-    const oAvg = avg(oem.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const oAvg = avg(oem.filter(r=>r.part_category===cat&&r.km_on_part>0).map(r=>r.km_on_part));
     maxKm = Math.max(maxKm, tAvg, oAvg);
   });
   if (!maxKm) maxKm = 10000;
@@ -602,9 +618,9 @@ function renderSummary() {
     const oRows  = oem.filter(r => r.part_category === cat);
     const oRepl  = oRows.filter(r => r.status === 'Replaced');
 
-    // Test avg: ALL bikes (replaced use replacement_odo - fitment, active use current_odo - fitment)
+    // Test avg: ALL bikes (replaced + active current KM)
     const tAvg = tRows.length ? avg(tRows.filter(r=>r.km_on_part>0).map(r=>r.km_on_part)) : 0;
-    // OEM avg: ALL OEM bikes (same logic — replaced + active current km)
+    // OEM avg: ALL OEM bikes (replaced + active current KM)
     const oAvg = oRows.length ? avg(oRows.filter(r=>r.km_on_part>0).map(r=>r.km_on_part)) : 0;
 
     const tBarW = maxKm ? Math.round(tAvg/maxKm*100) : 0;
