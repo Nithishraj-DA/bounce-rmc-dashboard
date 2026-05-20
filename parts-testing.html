@@ -425,7 +425,7 @@ async function loadOemRows() {
     // Get fitment JCs (first occurrence per chassis after startDate)
     const fitJcs = await sbFetch(
       `jc_details?select=chassis_number,reg_number,item_name,bike_odo,start_time,city,hub_name,line_type` +
-      `&or=(${keywords.map(k=>`item_name.ilike.*${k}*`).join(',')})` +
+      `&or=(${keywords.map(k=>`item_name.ilike.*${k.replace(/ /g,'%20')}*`).join(',')})` +
       `&start_time=gte.${startDate}` +
       `&city=in.(Bangalore,NCR,Hyderabad)` +
       `&order=chassis_number,start_time` +
