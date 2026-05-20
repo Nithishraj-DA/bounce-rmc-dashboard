@@ -188,8 +188,10 @@ async function load() {
     const txt = await res.text();
     if (!res.ok) throw new Error(txt);
     const data = JSON.parse(txt);
-    allRows = Array.isArray(data) ? data : [];
-    if (!allRows.length) throw new Error('RPC returned no data: ' + txt.slice(0,200));
+    // RETURNS jsonb comes back as a single-element array containing the jsonb value
+    const parsed = Array.isArray(data) ? data[0] : data;
+    allRows = Array.isArray(parsed) ? parsed : (parsed ? Object.values(parsed) : []);
+    if (!allRows.length) throw new Error('No data returned: ' + txt.slice(0,300));
     document.getElementById('meta').textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN') + ' · ' + allRows.length.toLocaleString() + ' records';
     render();
   } catch(e) {
