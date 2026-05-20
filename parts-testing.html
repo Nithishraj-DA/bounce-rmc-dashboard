@@ -328,15 +328,14 @@ async function loadTestRows() {
   // 1. Get all test fitments
   const fitments = await sbFetch('parts_testing?select=chassis_number,reg_number,part_category,part_name,fitted_date,km_at_fitment,hub,vendor_name,city&order=part_category,fitted_date');
 
-  // 2. Get current odometers
-  const chassisIds = [...new Set(fitments.map(r => r.chassis_number))];
-  const bikes = await sbFetch(`bike_fleet?select=chassis_number,current_odometer&chassis_number=in.(${chassisIds.map(c=>`"${c}"`).join(',')})`);
-  const odoMap = {};
-  bikes.forEach(b => odoMap[b.chassis_number] = b.current_odometer);
+  const chassisSet = new Set(fitments.map(r => r.chassis_number));
 
-  // 3. Get replacement JCs for test bikes (using part_category_mapping)
-  // For each test chassis, find first JC after fitted_date with matching item_name
-  const chassisStr = chassisIds.map(c => `"${c}"`).join(',');
+  // 2. Get current odometers — fetch all bike_fleet, filter in JS (avoids URL length limit)
+  const allBikes = await sbFetch('bike_fleet?select=chassis_number,current_odometer&limit=15000');
+  const odoMap = {};
+  allBikes.forEach(b => { if (chassisSet.has(b.chassis_number)) odoMap[b.chassis_number] = b.current_odometer; });
+
+  // 3. Get mappings
   const mappings = await sbFetch('part_category_mapping?select=category_name,jc_item_name,line_type,is_fitment');
   const catItems = {}, catLineType = {}, catFitmentItems = {};
   mappings.forEach(m => {
@@ -347,16 +346,21 @@ async function loadTestRows() {
   });
   Object.keys(catItems).forEach(cat => { if (!catFitmentItems[cat].length) catFitmentItems[cat] = [...catItems[cat]]; });
 
-  // Get all JCs for test chassis after their fitted dates
-  const jcs = await sbFetch(`jc_details?select=chassis_number,item_name,bike_odo,start_time,line_type&chassis_number=in.(${chassisStr})&order=chassis_number,start_time`);
+  // 4. Get all relevant JCs in one fetch using keyword OR filter
+  const allKeywords = [...new Set(Object.values(catItems).flat())];
+  const orFilter = allKeywords.map(k => `item_name.ilike.*${k.replace(/ /g,'%20')}*`).join(',');
+  const jcs = await sbFetch(`jc_details?select=chassis_number,item_name,bike_odo,start_time,line_type&or=(${orFilter})&order=chassis_number,start_time&limit=10000`);
 
-  // Build replacement map: chassis+category -> first replacement JC (correct line_type only)
+  // Filter to only test bikes in JS
+  const testJcs = jcs.filter(j => chassisSet.has(j.chassis_number));
+
+  // 5. Build replacement map per chassis+category
   const replMap = {};
   fitments.forEach(f => {
     const key = f.chassis_number + '|' + f.part_category;
     const keywords = catItems[f.part_category] || [];
     const ltMap = catLineType[f.part_category] || {};
-    const match = jcs.find(j =>
+    const match = testJcs.find(j =>
       j.chassis_number === f.chassis_number &&
       new Date(j.start_time) > new Date(f.fitted_date) &&
       keywords.some(k => {
@@ -368,7 +372,7 @@ async function loadTestRows() {
     if (match) replMap[key] = match;
   });
 
-  // 4. Build rows
+  // 6. Build rows
   const testRows = fitments.map(f => {
     const key = f.chassis_number + '|' + f.part_category;
     const repl = replMap[key];
@@ -395,7 +399,6 @@ async function loadTestRows() {
     };
   });
 
-  // Merge into allRows (replacing previous test rows)
   allRows = allRows.filter(r => r.type !== 'Test');
   allRows = [...allRows, ...testRows];
 }
