@@ -328,25 +328,33 @@ async function loadTestRows() {
   // 3. Get replacement JCs for test bikes (using part_category_mapping)
   // For each test chassis, find first JC after fitted_date with matching item_name
   const chassisStr = chassisIds.map(c => `"${c}"`).join(',');
-  const mappings = await sbFetch('part_category_mapping?select=category_name,jc_item_name');
-  const catItems = {};
+  const mappings = await sbFetch('part_category_mapping?select=category_name,jc_item_name,line_type,is_fitment');
+  const catItems = {}, catLineType = {}, catFitmentItems = {};
   mappings.forEach(m => {
-    if (!catItems[m.category_name]) catItems[m.category_name] = [];
+    if (!catItems[m.category_name]) { catItems[m.category_name] = []; catLineType[m.category_name] = {}; catFitmentItems[m.category_name] = []; }
     catItems[m.category_name].push(m.jc_item_name.toLowerCase());
+    catLineType[m.category_name][m.jc_item_name.toLowerCase()] = m.line_type;
+    if (m.is_fitment) catFitmentItems[m.category_name].push(m.jc_item_name.toLowerCase());
   });
+  Object.keys(catItems).forEach(cat => { if (!catFitmentItems[cat].length) catFitmentItems[cat] = [...catItems[cat]]; });
 
   // Get all JCs for test chassis after their fitted dates
-  const jcs = await sbFetch(`jc_details?select=chassis_number,item_name,bike_odo,start_time&chassis_number=in.(${chassisStr})&order=chassis_number,start_time`);
+  const jcs = await sbFetch(`jc_details?select=chassis_number,item_name,bike_odo,start_time,line_type&chassis_number=in.(${chassisStr})&order=chassis_number,start_time`);
 
-  // Build replacement map: chassis+category -> first replacement JC
+  // Build replacement map: chassis+category -> first replacement JC (correct line_type only)
   const replMap = {};
   fitments.forEach(f => {
     const key = f.chassis_number + '|' + f.part_category;
     const keywords = catItems[f.part_category] || [];
+    const ltMap = catLineType[f.part_category] || {};
     const match = jcs.find(j =>
       j.chassis_number === f.chassis_number &&
       new Date(j.start_time) > new Date(f.fitted_date) &&
-      keywords.some(k => j.item_name && j.item_name.toLowerCase().includes(k))
+      keywords.some(k => {
+        if (!j.item_name || !j.item_name.toLowerCase().includes(k)) return false;
+        const elt = ltMap[k] || 'Part';
+        return elt === 'Both' || j.line_type === elt;
+      })
     );
     if (match) replMap[key] = match;
   });
@@ -394,12 +402,15 @@ async function loadOemRows() {
       windows[f.part_category] = f.fitted_date;
   });
 
-  const mappings = await sbFetch('part_category_mapping?select=category_name,jc_item_name');
-  const catItems = {};
+  const mappings = await sbFetch('part_category_mapping?select=category_name,jc_item_name,line_type,is_fitment');
+  const catItems = {}, catLineType = {}, catFitmentItems = {};
   mappings.forEach(m => {
-    if (!catItems[m.category_name]) catItems[m.category_name] = [];
+    if (!catItems[m.category_name]) { catItems[m.category_name] = []; catLineType[m.category_name] = {}; catFitmentItems[m.category_name] = []; }
     catItems[m.category_name].push(m.jc_item_name.toLowerCase());
+    catLineType[m.category_name][m.jc_item_name.toLowerCase()] = m.line_type;
+    if (m.is_fitment) catFitmentItems[m.category_name].push(m.jc_item_name.toLowerCase());
   });
+  Object.keys(catItems).forEach(cat => { if (!catFitmentItems[cat].length) catFitmentItems[cat] = [...catItems[cat]]; });
 
   const oemRows = [];
 
@@ -413,7 +424,7 @@ async function loadOemRows() {
 
     // Get fitment JCs (first occurrence per chassis after startDate)
     const fitJcs = await sbFetch(
-      `jc_details?select=chassis_number,reg_number,item_name,bike_odo,start_time,city,hub_name` +
+      `jc_details?select=chassis_number,reg_number,item_name,bike_odo,start_time,city,hub_name,line_type` +
       `&or=(${keywords.map(k=>`item_name.ilike.*${k}*`).join(',')})` +
       `&start_time=gte.${startDate}` +
       `&city=in.(Bangalore,NCR,Hyderabad)` +
@@ -421,20 +432,32 @@ async function loadOemRows() {
       `&limit=5000`
     );
 
-    // Group by chassis: first JC = fitment, second JC = replacement
-    const byChass = {};
-    fitJcs.forEach(j => {
-      if (testChassis.has(j.chassis_number)) return;
-      if (!byChass[j.chassis_number]) byChass[j.chassis_number] = [];
-      byChass[j.chassis_number].push(j);
+    const ltMap = catLineType[cat] || {};
+
+    // Filter by correct line_type, exclude test bikes
+    const validJcs = fitJcs.filter(j => {
+      if (testChassis.has(j.chassis_number)) return false;
+      const kw = keywords.find(k => j.item_name && j.item_name.toLowerCase().includes(k));
+      if (!kw) return false;
+      const elt = ltMap[kw] || 'Part';
+      return elt === 'Both' || j.line_type === elt;
     });
 
-    Object.entries(byChass).forEach(([chassis, jcList]) => {
-      const first = jcList[0];
-      const second = jcList[1] || null;
+    // Group: first fitment item = fitment, next any item = replacement
+    const byChass = {};
+    validJcs.forEach(j => {
+      if (!byChass[j.chassis_number]) byChass[j.chassis_number] = { fitment: null, replacement: null };
+      const ch = byChass[j.chassis_number];
+      const isFit = catFitmentItems[cat].some(k => j.item_name && j.item_name.toLowerCase().includes(k));
+      if (!ch.fitment && isFit) { ch.fitment = j; }
+      else if (ch.fitment && !ch.replacement && new Date(j.start_time) > new Date(ch.fitment.start_time)) { ch.replacement = j; }
+    });
+
+    Object.entries(byChass).forEach(([chassis, {fitment: first, replacement: second}]) => {
+      if (!first) return;
       const kmOnPart = second
         ? Math.max(0, second.bike_odo - first.bike_odo)
-        : null; // still active for OEM too if only one JC
+        : null;
 
       const city = first.city === 'Bangalore' ? 'Bangalore' : first.city === 'NCR' ? 'NCR' : first.city === 'Hyderabad' ? 'Hyderabad' : first.city;
 
@@ -506,12 +529,12 @@ function renderKpis() {
   const cats = [...new Set(test.map(r => r.part_category))];
   let beating = 0;
   cats.forEach(cat => {
-    const tRows = test.filter(r => r.part_category === cat && r.km_on_part > 0);
-    const oRows = oem.filter(r => r.part_category === cat && r.status === 'Replaced' && r.km_on_part > 0);
-    if (!tRows.length || !oRows.length) return;
-    const tAvg = avg(tRows.map(r => r.km_on_part));
-    const oAvg = avg(oRows.map(r => r.km_on_part));
-    if (tAvg > oAvg) beating++;
+    const tCmpR = avg(test.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const oCmpR = avg(oem.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const tCmpA = avg(test.filter(r=>r.part_category===cat&&r.km_on_part>0).map(r=>r.km_on_part));
+    const oCmpA = avg(oem.filter(r=>r.part_category===cat&&r.km_on_part>0).map(r=>r.km_on_part));
+    const tC = tCmpR || tCmpA; const oC = oCmpR || oCmpA;
+    if (tC && oC && tC > oC) beating++;
   });
 
   document.getElementById('k-test').textContent  = test.length.toLocaleString();
@@ -535,9 +558,11 @@ function renderSummary() {
   // Find max KM for bar scaling
   let maxKm = 0;
   cats.forEach(cat => {
-    const tAvg = avg(test.filter(r=>r.part_category===cat&&r.km_on_part>0).map(r=>r.km_on_part));
-    const oAvg = avg(oem.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
-    maxKm = Math.max(maxKm, tAvg, oAvg);
+    const _tr = avg(test.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const _ta = avg(test.filter(r=>r.part_category===cat&&r.status==='Active'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const _or = avg(oem.filter(r=>r.part_category===cat&&r.status==='Replaced'&&r.km_on_part>0).map(r=>r.km_on_part));
+    const _oa = avg(oem.filter(r=>r.part_category===cat&&r.status==='Active'&&r.km_on_part>0).map(r=>r.km_on_part));
+    maxKm = Math.max(maxKm, _tr, _ta, _or, _oa);
   });
   if (!maxKm) maxKm = 10000;
 
