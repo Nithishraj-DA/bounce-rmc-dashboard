@@ -738,9 +738,16 @@ function renderOverdueWatch(jc, items){
   return '<div class="verdict verdict-watch"><div class="verdict-label">⚠ Also overdue — not on this request</div>'+
     '<div class="overdue-chips">'+chips+'</div></div>';
 }
+function decisionChip(jc){
+  if(!jc.decision) return '';
+  var cls = jc.decision==='approve' ? 'ok' : 'red';
+  var label = jc.decision==='approve' ? '✓ Nithish: Approved' : '✕ Nithish: Rejected';
+  return '<span class="chip '+cls+'" title="'+(jc.remarks?esc(jc.remarks):'')+(jc.decided_by?' — '+esc(jc.decided_by):'')+'">'+label+'</span>';
+}
 function renderJC(jc){
   var s=sid(jc.job_card_number);
   var chips=tatChip(jc.tat_days)+'<span class="chip parts">'+jc.part_count+' part'+(jc.part_count===1?'':'s')+'</span>'+
+    decisionChip(jc)+
     (jc.jc_status==='Job Re-Open (HO Reject)'?'<span class="chip amber">↺ Re-opened after HO rejection</span>':'')+
     ((jc.rejection_count||0)>0?'<span class="chip red">⚠ Rejected '+jc.rejection_count+'x before this request</span>':'')+
     ((jc.damage_fee_charged||0)>0 && (jc.damage_fee_paid||0) < (jc.damage_fee_charged||0)
@@ -1402,6 +1409,9 @@ async function nithishBoot(){
     if(!r.ok){document.getElementById('nResults').innerHTML='<div class="empty" style="color:var(--red)">Error loading.</div>';return;}
     var payload=await r.json();
     N_ALL=payload.jcs||[];
+    var warrOk=await loadWarrantyDecisions();
+    await loadCodeNames();
+    N_ALL.forEach(function(jc){ jc.__items=parseItems(jc); });
     nithishRender();
   }catch(e){document.getElementById('nResults').innerHTML='<div class="empty" style="color:var(--red)">Error.</div>';}
 }
@@ -1411,7 +1421,38 @@ function nithishFlagLabel(reason){
   if(reason==='premature_part') return '<span class="chip amber">↺ Premature part</span>';
   return '';
 }
+function nithishDecisionUI(jc){
+  var s=sid(jc.job_card_number);
+  var d=jc.decision;
+  var state = d
+    ? '<div class="decstate">'+(d==='approve'?'✓ Approved':'✕ Rejected')+(jc.decided_by?' by '+esc(jc.decided_by):'')+(jc.decided_at?' · '+fmtDate(jc.decided_at):'')+'</div>'
+    : '';
+  return '<div class="dec">'+
+    '<button class="btn btn-ok'+(d==='approve'?' active':'')+'" onclick="saveDecision(\''+s+'\',\'approve\')">Approve</button>'+
+    '<button class="btn btn-no'+(d==='reject'?' active':'')+'" onclick="saveDecision(\''+s+'\',\'reject\')">Reject</button>'+
+    '<textarea id="rmk_'+s+'" placeholder="Remarks (optional)">'+(jc.remarks?esc(jc.remarks):'')+'</textarea>'+
+    state+
+  '</div>';
+}
+async function saveDecision(s, decision){
+  var jc=N_ALL.find(function(j){ return sid(j.job_card_number)===s; });
+  if(!jc) return;
+  var remarksEl=document.getElementById('rmk_'+s);
+  var remarks=remarksEl?remarksEl.value.trim():'';
+  var who=currentUser();
+  try{
+    var r=await fetch(SB+'/rest/v1/ho_approval_decision',{
+      method:'POST',
+      headers:{...HDR,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({job_card_number:jc.job_card_number, decision:decision, remarks:remarks||null, decided_by:who||null, decided_at:new Date().toISOString()})
+    });
+    if(!r.ok){ alert('Could not save decision: '+(await r.text()).slice(0,200)); return; }
+    jc.decision=decision; jc.remarks=remarks||null; jc.decided_by=who||null; jc.decided_at=new Date().toISOString();
+    nithishRender();
+  }catch(e){ alert('Could not save decision.'); }
+}
 function nithishCard(jc){
+  var s=sid(jc.job_card_number);
   var premHtml='';
   if(jc.premature_items && jc.premature_items.length){
     premHtml='<div class="reason"><b>Premature part(s):</b> '+jc.premature_items.map(function(p){
@@ -1419,7 +1460,16 @@ function nithishCard(jc){
     }).join('; ')+'</div>';
   }
   var costHtml = jc.ap_amount>0 ? '<div class="reason"><b>Accident/Physical-damage (A/P) parts cost:</b> ₹'+nf(jc.ap_amount)+'</div>' : '';
-  return '<div class="jc">'+
+  var items=jc.__items||[];
+  var verdict=computeVerdict(jc, items);
+  var verdictHtml=renderVerdict(verdict);
+  var overdueWatchHtml=renderOverdueWatch(jc, items);
+  var body=renderPartsTable(jc, items);
+  var reason = jc.reason ? '<div class="reason"><b>Reason for ending:</b> '+esc(jc.reason)+'</div>' : '';
+  var rejectionDiff = renderRejectionDiff(jc);
+  var photos=renderPhotos(jc);
+  var damageFeeHtml = ' · Damage Fee: ₹'+nf(jc.damage_fee_charged||0)+' charged, ₹'+nf(jc.damage_fee_paid||0)+' paid';
+  return '<div class="jc" id="njc_'+s+'">'+
     '<div class="jc-hd" style="cursor:default">'+
       '<div class="jc-hd-left">'+
         '<div style="min-width:0">'+
@@ -1427,13 +1477,15 @@ function nithishCard(jc){
           '<div class="jc-summary-line">'+esc(jc.hub||'')+', '+esc(jc.city||'')+' · Tech: '+esc(jc.technician||'—')+' · '+esc(jc.submission_type||'')+' · '+nf(jc.km_at_jc)+' km'+((jc.rejection_count||0)>0?' · rejected '+jc.rejection_count+'x before':'')+'</div>'+
         '</div>'+
       '</div>'+
-      '<div class="chips">'+nithishFlagLabel(jc.flag_reason)+
+      '<div class="chips">'+nithishFlagLabel(jc.flag_reason)+decisionChip(jc)+
         (jc.jc_status==='Job Re-Open (HO Reject)'?'<span class="chip amber">↺ Re-opened after HO rejection</span>':'')+
       '</div>'+
     '</div>'+
     '<div class="jc-body open">'+
-      '<div class="jc-meta" style="padding:0 16px 10px">bike '+esc(jc.bike_status||'')+' · opened '+fmtDate(jc.opened_date)+(jc.reason?' · Reason: '+esc(jc.reason):'')+'</div>'+
-      costHtml+premHtml+
+      '<div class="jc-meta" style="padding:0 16px 10px">Requested At '+fmtDate(jc.latest_status_date)+' · bike '+esc(jc.bike_status||'')+' · Deployed '+fmtDate(jc.deployed_date)+damageFeeHtml+'</div>'+
+      costHtml+premHtml+verdictHtml+
+      '<div class="jc-split"><div>'+body+rejectionDiff+overdueWatchHtml+'</div><div class="jc-side">'+photos+reason+'</div></div>'+
+      nithishDecisionUI(jc)+
     '</div>'+
   '</div>';
 }
