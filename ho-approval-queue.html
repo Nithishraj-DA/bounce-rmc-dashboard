@@ -332,6 +332,7 @@ const SB='https://fuslpeyhpmofzijrotkb.supabase.co';
 const ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1c2xwZXlocG1vZnppanJvdGtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDg0NDgsImV4cCI6MjA5NDMyNDQ0OH0.IGtWV-bus0Tc1i3z7hWuFZEda06q8L31YyBgiOFujbs';
 const HDR={apikey:ANON,Authorization:'Bearer '+ANON};
 let ALL=[];
+let SPECIAL_APPROVAL_JCS=new Set();
 function nf(n){return (n==null?0:Math.round(n)).toLocaleString('en-IN');}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function sid(s){return String(s).replace(/[^a-z0-9]/gi,'_');}
@@ -526,6 +527,13 @@ async function load(){
     ALL=payload.jcs||[];
     SYNCED_AT=payload.synced_at||null;
     renderSyncedAt();
+    try{
+      var nr=await fetch(SB+'/rest/v1/rpc/get_nithish_approval_queue',{method:'POST',headers:{...HDR,'Content-Type':'application/json'},body:'{}'});
+      if(nr.ok){
+        var npayload=await nr.json();
+        SPECIAL_APPROVAL_JCS=new Set((npayload.jcs||[]).map(function(j){return j.job_card_number;}));
+      }
+    }catch(e){ /* non-fatal -- chip just won't show if this fails */ }
     var warrOk=await loadWarrantyDecisions();
     await loadCodeNames();
     ALL.forEach(function(jc){ jc.__items=parseItems(jc); });
@@ -741,6 +749,7 @@ function renderOverdueWatch(jc, items){
 function decisionChip(jc){
   if(jc.decision==='approve') return '<span class="chip ok" title="'+(jc.remarks?esc(jc.remarks):'')+(jc.decided_by?' — '+esc(jc.decided_by):'')+'">✓ Nithish: Approved</span>';
   if(jc.decision==='reject') return '<span class="chip red" title="'+(jc.remarks?esc(jc.remarks):'')+(jc.decided_by?' — '+esc(jc.decided_by):'')+'">✕ Nithish: Rejected</span>';
+  if(!SPECIAL_APPROVAL_JCS.has(jc.job_card_number)) return '';
   return '<span class="chip" style="background:#f1f5f9;color:#64748b">○ Nithish: Not Reviewed</span>';
 }
 function renderJC(jc){
@@ -1408,6 +1417,7 @@ async function nithishBoot(){
     if(!r.ok){document.getElementById('nResults').innerHTML='<div class="empty" style="color:var(--red)">Error loading.</div>';return;}
     var payload=await r.json();
     N_ALL=payload.jcs||[];
+    N_ALL.forEach(function(jc){ SPECIAL_APPROVAL_JCS.add(jc.job_card_number); });
     var warrOk=await loadWarrantyDecisions();
     await loadCodeNames();
     N_ALL.forEach(function(jc){ jc.__items=parseItems(jc); });
