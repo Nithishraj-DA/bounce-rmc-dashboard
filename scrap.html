@@ -293,7 +293,7 @@
           <thead><tr>
             <th>Part</th><th>System Consumed</th><th>Actual available in Hub</th>
             <th>Sent to RPDC</th><th>Sent to vendor</th><th>Refurbed</th><th>Rejected</th>
-            <th>Refurbed part Received at RPDC</th><th>Rejected part Received at RPDC</th><th>Refurb %</th>
+            <th>Refurbed part Received at RPDC</th><th>Rejected part Received at RPDC</th><th>Document</th><th>Refurb %</th>
           </tr></thead>
           <tbody id="pt-rowsBody-Refurb"></tbody>
         </table>
@@ -321,7 +321,7 @@
           <thead><tr>
             <th>Part</th><th>System Consumed</th><th>Actual available in Hub</th>
             <th>Sent to RPDC</th><th>Sent to vendor</th><th>CN Approved</th><th>CN Rejected</th>
-            <th>CN Approved part Received at RPDC</th><th>CN Rejected part Received at RPDC</th><th>CN Approved %</th>
+            <th>CN Approved part Received at RPDC</th><th>CN Rejected part Received at RPDC</th><th>CN Document</th><th>CN Approved %</th>
           </tr></thead>
           <tbody id="pt-rowsBody-Tyre"></tbody>
         </table>
@@ -2064,10 +2064,18 @@ function ptRenderType(type) {
   const tbody = document.getElementById('pt-rowsBody-' + type);
   if (!tbody) return;
   const rows = PIPELINE_ROWS[type] || [];
-  const colCount = type === 'Scrap' ? 9 : 10;
+  const colCount = type === 'Scrap' ? 9 : 11;
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty">No ${type.toLowerCase()} data for this range/filter.</td></tr>`; return; }
 
   const inp = (cls, val) => ptCanEdit ? `<input type="number" class="${cls}" value="${val ?? ''}">` : `<span class="num ${val == null ? 'muted-cell' : ''}">${val ?? '—'}</span>`;
+  const cnDocCell = (row) => {
+    const viewLink = row.cn_document_url
+      ? `<a href="${row.cn_document_url}" target="_blank" rel="noopener" style="font-size:11px;display:block;margin-bottom:3px">📄 View</a>`
+      : '';
+    return ptCanEdit
+      ? `<td>${viewLink}<input type="file" class="f-cn-doc" accept="image/*,application/pdf" style="font-size:11px;max-width:130px"></td>`
+      : `<td>${viewLink || '<span class="muted-cell">—</span>'}</td>`;
+  };
 
   tbody.innerHTML = rows.map(row => {
     const pct = row.pct != null ? row.pct + '%' : '—';
@@ -2084,7 +2092,7 @@ function ptRenderType(type) {
         <td class="num">${pct}</td>
       </tr>`;
     }
-    return `<tr data-part="${ptEscapeAttr(row.part_name)}">
+    return `<tr data-part="${ptEscapeAttr(row.part_name)}" data-cn-doc-existing="${ptEscapeAttr(row.cn_document_url || '')}">
       <td>${row.part_name}</td>
       <td class="num">${row.consumed} ${row.unit}</td>
       <td class="num ${row.actual_in_hub == null ? 'muted-cell' : ''}">${row.actual_in_hub ?? '—'}</td>
@@ -2094,6 +2102,7 @@ function ptRenderType(type) {
       <td>${inp('f-rejected', row.rejected)}</td>
       <td>${inp('f-recv-outcome', row.received_rpdc_outcome)}</td>
       <td>${inp('f-recv-rejected', row.received_rpdc_rejected)}</td>
+      ${cnDocCell(row)}
       <td class="num">${pct}</td>
     </tr>`;
   }).join('');
@@ -2111,20 +2120,32 @@ async function ptSaveAll(type) {
   const now = new Date().toISOString();
 
   const payload = [];
-  document.querySelectorAll(`#pt-rowsBody-${type} > tr[data-part]`).forEach(tr => {
+  for (const tr of document.querySelectorAll(`#pt-rowsBody-${type} > tr[data-part]`)) {
     const part = tr.dataset.part;
     const val = sel => { const el = tr.querySelector(sel); if (!el) return undefined; return el.value === '' ? null : parseFloat(el.value); };
     const rpdc = val('.f-rpdc'), vendor = val('.f-vendor'), outcome = val('.f-outcome'), rejected = val('.f-rejected'),
           recvOutcome = val('.f-recv-outcome'), recvRejected = val('.f-recv-rejected');
-    if ([rpdc, vendor, outcome, rejected, recvOutcome, recvRejected].every(v => v === undefined || v === null)) return;
-    payload.push({
+    const docInput = tr.querySelector('.f-cn-doc');
+    const docFile = docInput && docInput.files && docInput.files[0] ? docInput.files[0] : null;
+    if ([rpdc, vendor, outcome, rejected, recvOutcome, recvRejected].every(v => v === undefined || v === null) && !docFile) continue;
+    const row = {
       period_from: from, period_to: to, city, item_type: type, item_name: part,
       sent_to_rpdc_qty: rpdc ?? null, sent_to_vendor_qty: vendor ?? null,
       refurbed_qty: outcome ?? null, rejected_qty: rejected ?? null,
       received_at_rpdc_qty: recvOutcome ?? null, received_at_rpdc_rejected_qty: recvRejected ?? null,
       updated_by: email, updated_at: now
-    });
-  });
+    };
+    // Only touch cn_document_url when a NEW file was actually chosen this
+    // save -- merge-duplicates only updates columns present in the row, so
+    // omitting it here leaves whatever was already saved untouched instead
+    // of accidentally clearing it on every unrelated edit to this part.
+    if (docFile) {
+      const url = await uploadScrapPhoto(docFile);
+      if (url) row.cn_document_url = url;
+      else alert(`Could not upload the CN document for "${part}" — the rest of this row will still save.`);
+    }
+    payload.push(row);
+  }
 
   if (payload.length) {
     await ptSbUpsert('refurb_manual_entries_city', payload, 'period_from,period_to,city,item_type,item_name');
