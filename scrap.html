@@ -1527,8 +1527,8 @@ async function saveEditedMovement() {
   }
 
   const systemCalc = row.system_calculated;
-  if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc) {
-    alert(`Cannot save — ${fmtN(drivingQty)} exceeds what was actually pending (${fmtN(systemCalc)}) when this movement was created. This would double-count material already accounted for elsewhere.`);
+  if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc && !remark) {
+    alert(`Cannot save — ${fmtN(drivingQty)} exceeds what was actually pending (${fmtN(systemCalc)}) when this movement was created.\n\nIf this is a genuine correction (e.g. actual stock found that the system's estimate missed), add a Remark explaining it and save again.`);
     return;
   }
   if (systemCalc != null && drivingQty < systemCalc * VARIANCE_THRESHOLD && !remark) {
@@ -1675,18 +1675,15 @@ async function createBatch() {
     const drivingQty = unit === 'kg' ? actualWeight : actualQty;
     if (isNaN(drivingQty) || drivingQty <= 0) continue; // blank row, skip
     const systemCalc = tr.dataset.syscalcRaw !== '' ? parseFloat(tr.dataset.syscalcRaw) : null;
-    // Hard block: can't log more than what's actually still pending. If
-    // System Calculated is already at/near zero (fully accounted for by an
-    // earlier movement covering this same period), a second movement for
-    // more of it is a double-count, not a legitimate correction -- unlike a
-    // shortfall, there's no remark that makes "claiming material that
-    // doesn't exist" a valid entry.
-    // A NEGATIVE System Calculated is not a trustworthy "already accounted
-    // for" signal, though -- it's the signature of incomplete weight-
-    // reference coverage understating the true Estimated side (see Manage
-    // Part Weights), not evidence the material doesn't exist. Only block
-    // when the figure is genuinely positive.
-    if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc) {
+    const remark = tr.querySelector('.row-remark').value.trim();
+    // Claiming more than System Calculated shows as still pending is a real
+    // red flag -- it usually means this material was already accounted for
+    // by an earlier movement covering the same period, and this would
+    // double-count it. But unlike a shortfall, this can occasionally be a
+    // genuine correction (e.g. actual physical stock found in the hub that
+    // the system's own estimate never captured) -- so it's blocked only
+    // when unexplained; a remark lets it through, same as a shortfall does.
+    if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc && !remark) {
       overClaim.push(`${label} (${fmtN(systemCalc)} still pending, ${fmtN(drivingQty)} entered)`);
       continue;
     }
@@ -1696,7 +1693,6 @@ async function createBatch() {
       if (isNaN(rate)) { missingRate.push(category); continue; }
       total = drivingQty * rate;
     }
-    const remark = tr.querySelector('.row-remark').value.trim();
     // A shortfall of more than 10% against what the system expected must be
     // explained -- otherwise it silently keeps inflating Pending forever,
     // looking like material that's still sitting out there waiting to be
