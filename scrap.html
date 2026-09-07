@@ -1585,21 +1585,28 @@ async function uploadScrapPhoto(file) {
   return `${SB}/storage/v1/object/public/scrap-photos/${path}`;
 }
 
-async function findOverlappingPeriod(hub, type, newFrom, newTo) {
+async function findOverlappingPeriods(hub, type, newFrom, newTo) {
+  // Returns ALL overlapping batches for this hub+type, each tagged with the
+  // category/part it actually covers -- callers scope this down to just the
+  // part(s) being entered right now. An overlap on Part A elsewhere in this
+  // hub+type is irrelevant to someone entering Part B for the first time in
+  // this period; only a genuine same-part overlap should ever block.
+  const isScrap = type === 'Scrap';
+  const field = isScrap ? 'category' : 'part_name';
   try {
-    const rows = await sbGet(`scrap_sales?select=id,batch_id,period_from,period_to&hub_name=eq.${encodeURIComponent(hub)}&movement_type=eq.${encodeURIComponent(type)}&status=neq.Cancelled&period_from=not.is.null&period_to=not.is.null`);
-    // Dedupe by batch (a batch's rows all share the same period)
+    const rows = await sbGet(`scrap_sales?select=id,batch_id,period_from,period_to,${field}&hub_name=eq.${encodeURIComponent(hub)}&movement_type=eq.${encodeURIComponent(type)}&status=neq.Cancelled&period_from=not.is.null&period_to=not.is.null`);
     const seen = new Set();
+    const conflicts = [];
     for (const r of rows) {
-      const key = r.batch_id || r.id;
+      const key = (r.batch_id || r.id) + '|' + r[field];
       if (seen.has(key)) continue;
       seen.add(key);
-      // Standard range-overlap check: two ranges overlap unless one ends
-      // before the other starts.
-      if (newFrom <= r.period_to && newTo >= r.period_from) return r;
+      if (newFrom <= r.period_to && newTo >= r.period_from) {
+        conflicts.push({ label: r[field], period_from: r.period_from, period_to: r.period_to, batch: r.batch_id || r.id });
+      }
     }
-  } catch (e) { console.error('overlap check failed', e); }
-  return null;
+    return conflicts;
+  } catch (e) { console.error('overlap check failed', e); return []; }
 }
 
 async function suggestNextPeriod() {
@@ -1651,14 +1658,6 @@ async function createBatch() {
 
   if (!hub || !date) { alert('Hub and Pickup Date are required.'); return; }
 
-  if (periodFrom && periodTo) {
-    const conflict = await findOverlappingPeriod(hub, type, periodFrom, periodTo);
-    if (conflict) {
-      alert(`This period (${periodFrom} to ${periodTo}) overlaps an existing movement for ${hub} (${type}):\n${conflict.period_from} to ${conflict.period_to} — batch ${conflict.batch_id || conflict.id}.\n\nAdjust the Period dates before saving, or this scrap will be double-counted.`);
-      return;
-    }
-  }
-
   const rows = [...document.querySelectorAll('#s-rows-tbody tr[data-category], #s-rows-tbody tr[data-part]')];
   const filled = [];
   const missingRate = [];
@@ -1705,6 +1704,17 @@ async function createBatch() {
     const photoFile = tr.querySelector('.row-photo').files[0];
     if (!photoFile) { missingPhoto.push(label); continue; }
     filled.push({ category, partName, unit, actualQty: isNaN(actualQty) ? null : actualQty, actualWeight: isNaN(actualWeight) ? null : actualWeight, drivingQty, rate, total, systemCalc, remark: remark || null, photoFile });
+  }
+
+  if (periodFrom && periodTo && filled.length) {
+    const allConflicts = await findOverlappingPeriods(hub, type, periodFrom, periodTo);
+    const filledLabels = new Set(filled.map(f => f.category || f.partName));
+    const relevant = allConflicts.filter(c => filledLabels.has(c.label));
+    if (relevant.length) {
+      const lines = relevant.map(c => `${c.label}: ${c.period_from} to ${c.period_to} — batch ${c.batch}`);
+      alert(`This period (${periodFrom} to ${periodTo}) overlaps an existing movement for these specific part(s)/categor(y/ies) at ${hub} (${type}):\n\n${lines.join('\n')}\n\nAdjust the Period dates before saving, or these would be double-counted. Other parts in this batch without a conflict are unaffected -- only remove or fix the ones listed above.`);
+      return;
+    }
   }
 
   if (overClaim.length) { alert('Cannot save — this claims more than what is actually still pending for:\n\n' + overClaim.join('\n') + '\n\nThis material may already be fully accounted for by an earlier movement covering this period. If this is a genuine correction, edit the earlier movement instead of creating a new one.'); return; }
