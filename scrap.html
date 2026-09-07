@@ -643,8 +643,8 @@ async function renderMovementRows() {
   // (e.g. viewing "All Hubs" up top while logging a movement for one hub).
   let pendingByCategory = {}, pendingByPart = {};
   if (type === 'Scrap') {
-    const summary = scopedFrom && scopedTo ? await rpc('get_scrap_summary', { p_from: scopedFrom, p_to: scopedTo, p_city: scopedCity, p_hub: scopedHub }) : null;
-    (summary && summary.by_category ? summary.by_category : []).forEach(c => { pendingByCategory[c.category] = c.variance; });
+    const genRows = scopedFrom && scopedTo ? await rpc('get_scrap_generated_in_period', { p_from: scopedFrom, p_to: scopedTo, p_city: scopedCity, p_hub: scopedHub }) : null;
+    (genRows || []).forEach(c => { pendingByCategory[c.category] = c.estimated; });
   } else {
     const rows = scopedFrom && scopedTo ? await rpc('get_movement_pipeline', { p_type: type, p_from: scopedFrom, p_to: scopedTo, p_city: scopedCity, p_hub: scopedHub }) : null;
     (rows || []).forEach(r => { pendingByPart[r.part_name] = Math.max((r.consumed || 0) - (r.actual_in_hub || 0), 0); });
