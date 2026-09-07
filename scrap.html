@@ -620,8 +620,8 @@ async function renderMovementRows() {
     sHub.value = document.getElementById('f-hub').value;
     sHub.dataset.seeded = '1';
   }
-  if (!pf.value) pf.value = document.getElementById('f-from').value;
   if (!pt.value) pt.value = document.getElementById('f-to').value;
+  await suggestNextPeriod(); // sets/locks Period From based on this hub+type's history
 
   const type = document.getElementById('s-type').value;
   const thead = document.getElementById('s-rows-thead');
@@ -1606,14 +1606,35 @@ async function suggestNextPeriod() {
   const hub = document.getElementById('s-hub').value;
   const type = document.getElementById('s-type').value;
   const fromInput = document.getElementById('s-period-from-display');
-  if (!hub || !type || !fromInput || fromInput.value) return; // don't override a value already typed
+  if (!hub || !type || !fromInput) return;
+  // Whole-city pseudo-hub entries ("All Bangalore Hubs" etc.) don't have a
+  // single well-defined "last period" -- leave those editable rather than
+  // locking to a potentially misleading date.
+  const isWholeCityHub = hub.startsWith('All ') && hub.endsWith(' Hubs');
+  if (isWholeCityHub) {
+    fromInput.readOnly = false;
+    fromInput.title = '';
+    fromInput.style.background = '';
+    return;
+  }
   try {
     const rows = await sbGet(`scrap_sales?select=period_to&hub_name=eq.${encodeURIComponent(hub)}&movement_type=eq.${encodeURIComponent(type)}&status=neq.Cancelled&period_to=not.is.null&order=period_to.desc&limit=1`);
     if (rows && rows.length && rows[0].period_to) {
+      // Hard lock: this hub+type has a prior period on record, so the next
+      // one must start the day after it ended -- no gaps, no overlaps, and
+      // not something the person can freely retype.
       const next = new Date(rows[0].period_to + 'T00:00:00');
       next.setDate(next.getDate() + 1);
       fromInput.value = next.toISOString().slice(0, 10);
-      fromInput.title = `Auto-suggested: the day after the last logged period for ${hub} (${type}) ended.`;
+      fromInput.readOnly = true;
+      fromInput.style.background = 'var(--surface-1,#f1f5f9)';
+      fromInput.title = `Locked: the day after the last logged period for ${hub} (${type}) ended (${rows[0].period_to}). Edit the earlier movement instead if that period was wrong.`;
+    } else {
+      // No prior movement for this hub+type -- nothing to lock to yet, so
+      // this one genuine first entry needs a manually-chosen start date.
+      fromInput.readOnly = false;
+      fromInput.style.background = '';
+      fromInput.title = 'No prior movement found for this hub — pick the starting date for this new tracking sequence.';
     }
   } catch (e) { console.error('suggestNextPeriod failed', e); }
 }
