@@ -627,7 +627,14 @@ async function renderMovementRows() {
   const thead = document.getElementById('s-rows-thead');
   const tbody = document.getElementById('s-rows-tbody');
   const grandTotalEl = document.getElementById('s-grand-total');
-  const scopedFrom = pf.value, scopedTo = pt.value, scopedCity = sCity.value || null, scopedHub = sHub.value || null;
+  const scopedFrom = pf.value, scopedTo = pt.value, scopedCity = sCity.value || null;
+  // "All Bangalore Hubs" / "All NCR Hubs" are UI-only placeholders for
+  // logging a city-wide reconciliation entry -- they never appear as a real
+  // hub_name in scrap_disposition/scrap_sales/rmc_jc_lines, so passing them
+  // straight through as p_hub matched nothing and always showed 0/blank.
+  // Treat them as no hub filter, letting scopedCity do the aggregation.
+  const rawHub = sHub.value || null;
+  const scopedHub = (rawHub && rawHub.startsWith('All ') && rawHub.endsWith(' Hubs')) ? null : rawHub;
 
   tbody.innerHTML = '<tr><td class="empty"><span class="spin"></span></td></tr>';
 
