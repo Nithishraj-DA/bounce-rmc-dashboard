@@ -750,6 +750,15 @@ function renderOverdueWatch(jc, items){
   return '<div class="verdict verdict-watch"><div class="verdict-label">⚠ Also overdue — not on this request</div>'+
     '<div class="overdue-chips">'+chips+'</div></div>';
 }
+function decisionRemarkLine(jc){
+  if(!jc.decision || !jc.remarks) return '';
+  var cls = jc.decision==='approve' ? '#15803d' : '#b91c1c';
+  var bg = jc.decision==='approve' ? '#f0fdf4' : '#fef2f2';
+  var label = jc.decision==='approve' ? 'Approved' : 'Rejected';
+  return '<div style="margin:0 16px 10px;padding:8px 12px;background:'+bg+';border-radius:8px;font-size:12.5px;color:'+cls+'">'+
+    '<b>Nithish\u2019s remark ('+label+(jc.decided_by?' by '+esc(jc.decided_by):'')+'):</b> '+esc(jc.remarks)+
+  '</div>';
+}
 function decisionChip(jc){
   if(jc.decision==='approve') return '<span class="chip ok" title="'+(jc.remarks?esc(jc.remarks):'')+(jc.decided_by?' — '+esc(jc.decided_by):'')+'">✓ Nithish: Approved</span>';
   if(jc.decision==='reject') return '<span class="chip red" title="'+(jc.remarks?esc(jc.remarks):'')+(jc.decided_by?' — '+esc(jc.decided_by):'')+'">✕ Nithish: Rejected</span>';
@@ -796,6 +805,7 @@ function renderJC(jc){
     '</div>'+
     '<div class="jc-body'+(defaultOpen?' open':'')+'" id="jcbody_'+s+'">'+
       '<div class="jc-meta" style="padding:0 16px 10px">Requested At '+fmtDate(jc.latest_status_date)+(jc.latest_status_date?' '+new Date(jc.latest_status_date).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}):'')+' · bike '+esc(jc.bike_status||'')+' · Deployed '+fmtDate(jc.deployed_date)+damageFeeHtml+'</div>'+
+      decisionRemarkLine(jc)+
       verdictHtml+
       '<div class="jc-split"><div>'+body+rejectionDiff+overdueWatchHtml+'</div><div class="jc-side">'+photos+reason+'</div></div>'+
       '<div class="foot"><span>'+esc(jc.submission_type||'')+'</span><span>DMS JC '+esc(jc.dms_jc_id||'—')+'</span></div>'+
@@ -1503,6 +1513,7 @@ function nithishCard(jc){
     '</div>'+
     '<div class="jc-body open">'+
       '<div class="jc-meta" style="padding:0 16px 10px">Requested At '+fmtDate(jc.latest_status_date)+' · bike '+esc(jc.bike_status||'')+' · Deployed '+fmtDate(jc.deployed_date)+damageFeeHtml+'</div>'+
+      decisionRemarkLine(jc)+
       costHtml+premHtml+verdictHtml+
       '<div class="jc-split"><div>'+body+rejectionDiff+overdueWatchHtml+'</div><div class="jc-side">'+photos+reason+'</div></div>'+
       nithishDecisionUI(jc)+
