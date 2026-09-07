@@ -1723,7 +1723,7 @@ async function createBatch() {
     }
   }
 
-  if (overClaim.length) { alert('Cannot save — this claims more than what is actually still pending for:\n\n' + overClaim.join('\n') + '\n\nThis material may already be fully accounted for by an earlier movement covering this period. If this is a genuine correction, edit the earlier movement instead of creating a new one.'); return; }
+  if (overClaim.length) { alert('Remark required — this claims more than what is actually still pending for:\n\n' + overClaim.join('\n') + '\n\nAdd a Remark explaining why (e.g. actual stock found in hub, missed in an earlier count) for the row(s) above and save again. If this material was genuinely already logged in an earlier movement instead, edit that movement rather than creating a new one.'); return; }
   if (missingRate.length) { alert('Rate is required for: ' + missingRate.join(', ')); return; }
   if (missingRemark.length) { alert('Actual is less than System Calculated for:\n\n' + missingRemark.join('\n') + '\n\nPlease add a Remark explaining the shortfall (missing, broken, etc.) before saving.'); return; }
   if (missingPhoto.length) { alert('Photo is required for:\n\n' + missingPhoto.join('\n')); return; }
