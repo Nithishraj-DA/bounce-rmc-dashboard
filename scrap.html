@@ -650,7 +650,7 @@ async function renderMovementRows() {
     tbody.innerHTML = visibleCategories.length ? visibleCategories.map((c, ci) => {
       const pending = pendingByCategory[c.category];
       const pendingText = pending == null ? '—'
-        : pending < 0 ? `0 ${c.unit} <span class="info-dot" title="System backlog shows negative (${fmtN(pending)} ${c.unit}) due to incomplete weight-reference data for this category, not because nothing is outstanding. Treat as unknown, not zero.">⚠</span>`
+        : pending < 0 ? `${fmtN(pending)} ${c.unit} <span class="info-dot" title="Negative because of incomplete weight-reference data for this category (see Manage Part Weights) — the real amount outstanding is understated, not actually negative.">⚠</span>`
         : `${fmtN(pending)} ${c.unit}`;
       return `<tr data-category="${c.category.replace(/"/g,'&quot;')}" data-unit="${c.unit}" data-rate="${c.reference_rate || ''}" data-syscalc-raw="${pending != null ? pending : ''}">
         <td>${c.category} <span style="color:var(--muted);font-size:10px">(${c.unit})</span></td>
