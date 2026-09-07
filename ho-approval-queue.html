@@ -780,7 +780,7 @@ function renderJC(jc){
   var statusClass = verdict.verdict==='review' ? 'review' : verdict.verdict==='approve-with-notes' ? 'notes' : 'ok';
   var statusIcon = statusClass==='review' ? '!' : statusClass==='notes' ? '·' : '✓';
   var defaultOpen = statusClass==='review';
-  var summaryBits=[esc(jc.submission_type||''), nf(jc.km_at_jc)+' km'];
+  var summaryBits=[esc(jc.jc_status||''), esc(jc.submission_type||''), nf(jc.km_at_jc)+' km'];
   if((jc.rejection_count||0)>0) summaryBits.push('rejected '+jc.rejection_count+'x before');
   if((jc.damage_fee_charged||0)>0) summaryBits.push('damage fee ₹'+nf(jc.damage_fee_charged)+(((jc.damage_fee_paid||0)<(jc.damage_fee_charged||0))?' (unpaid)':''));
   return '<div class="jc" id="jc_'+s+'">'+
@@ -1494,7 +1494,7 @@ function nithishCard(jc){
       '<div class="jc-hd-left">'+
         '<div style="min-width:0">'+
           '<div class="jc-title">JC '+esc(jc.job_card_number)+' &nbsp;·&nbsp; '+esc(jc.reg_number)+' <span style="color:var(--muted);font-weight:500">('+esc(jc.bike_model||'')+')</span> <span style="color:var(--muted2);font-weight:500;font-size:12px">&nbsp;·&nbsp; DMS JC '+esc(jc.dms_jc_id||'—')+'</span></div>'+
-          '<div class="jc-summary-line">'+esc(jc.hub||'')+', '+esc(jc.city||'')+' · Tech: '+esc(jc.technician||'—')+' · '+esc(jc.submission_type||'')+' · '+nf(jc.km_at_jc)+' km'+((jc.rejection_count||0)>0?' · rejected '+jc.rejection_count+'x before':'')+'</div>'+
+          '<div class="jc-summary-line">'+esc(jc.jc_status||'')+' · '+esc(jc.hub||'')+', '+esc(jc.city||'')+' · Tech: '+esc(jc.technician||'—')+' · '+esc(jc.submission_type||'')+' · '+nf(jc.km_at_jc)+' km'+((jc.rejection_count||0)>0?' · rejected '+jc.rejection_count+'x before':'')+'</div>'+
         '</div>'+
       '</div>'+
       '<div class="chips">'+nithishFlagLabel(jc.flag_reason)+decisionChip(jc)+
