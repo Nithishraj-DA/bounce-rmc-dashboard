@@ -1518,7 +1518,7 @@ async function saveEditedMovement() {
   }
 
   const systemCalc = row.system_calculated;
-  if (systemCalc != null && drivingQty > systemCalc) {
+  if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc) {
     alert(`Cannot save — ${fmtN(drivingQty)} exceeds what was actually pending (${fmtN(systemCalc)}) when this movement was created. This would double-count material already accounted for elsewhere.`);
     return;
   }
@@ -1651,7 +1651,12 @@ async function createBatch() {
     // more of it is a double-count, not a legitimate correction -- unlike a
     // shortfall, there's no remark that makes "claiming material that
     // doesn't exist" a valid entry.
-    if (systemCalc != null && drivingQty > systemCalc) {
+    // A NEGATIVE System Calculated is not a trustworthy "already accounted
+    // for" signal, though -- it's the signature of incomplete weight-
+    // reference coverage understating the true Estimated side (see Manage
+    // Part Weights), not evidence the material doesn't exist. Only block
+    // when the figure is genuinely positive.
+    if (systemCalc != null && systemCalc > 0 && drivingQty > systemCalc) {
       overClaim.push(`${label} (${fmtN(systemCalc)} still pending, ${fmtN(drivingQty)} entered)`);
       continue;
     }
