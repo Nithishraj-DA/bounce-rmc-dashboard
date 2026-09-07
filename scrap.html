@@ -1630,8 +1630,14 @@ async function suggestNextPeriod() {
       // Hard lock: this hub+type has a prior period on record, so the next
       // one must start the day after it ended -- no gaps, no overlaps, and
       // not something the person can freely retype.
-      const next = new Date(rows[0].period_to + 'T00:00:00');
-      next.setDate(next.getDate() + 1);
+      // Built with pure UTC date construction (Date.UTC), not by parsing
+      // the string as local time and later reading it back via toISOString
+      // -- that round-trip silently shifted the result back to the SAME day
+      // instead of +1 for anyone in a timezone ahead of UTC (e.g. IST),
+      // which then made the very next save look like it overlapped the
+      // batch this lock was supposed to avoid overlapping.
+      const [py, pm, pd] = rows[0].period_to.split('-').map(Number);
+      const next = new Date(Date.UTC(py, pm - 1, pd + 1));
       fromInput.value = next.toISOString().slice(0, 10);
       fromInput.readOnly = true;
       fromInput.style.background = 'var(--surface-1,#f1f5f9)';
