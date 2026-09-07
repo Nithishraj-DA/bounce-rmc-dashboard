@@ -316,6 +316,10 @@ tr.row-flag:hover{background:#fee2e2}
 <div class="psub">Job cards waiting for HO approval or re-opened after HO rejection, filtered to what needs a closer personal look: Accident/Physical-damage (issue category A or P) parts cost over ₹3,000, OR a tyre/brake-shoe/brake-pad request where that exact part was itself last replaced suspiciously recently (under 13,000km for tyres, 6,000km for brake shoes, 4,000km for brake pads).</div>
 <div class="bar">
   <span class="count" id="nCount">Loading…</span>
+  <input type="date" id="nDateFilter" onchange="nithishRender()" style="max-width:150px">
+  <button class="btn" style="padding:8px 12px;font-size:12px" onclick="setNithishDateFilter('today')">Today</button>
+  <button class="btn" style="padding:8px 12px;font-size:12px" onclick="setNithishDateFilter('yesterday')">Yesterday</button>
+  <button class="btn" style="padding:8px 12px;font-size:12px" onclick="clearNithishDateFilter()">All dates</button>
   <input type="text" id="nSearch" placeholder="Filter by vehicle, hub, technician or JC…" oninput="nithishRender()">
   <select id="nFlagFilter" onchange="nithishRender()" style="padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit">
     <option value="">All reasons</option>
@@ -1410,6 +1414,13 @@ function qualityRender(){
 
 // ══════════════════ Special Approval tab ══════════════════
 let N_ALL=[];
+function clearNithishDateFilter(){ document.getElementById('nDateFilter').value=''; nithishRender(); }
+function setNithishDateFilter(which){
+  var d=new Date(Date.now()+5.5*60*60*1000); // IST
+  if(which==='yesterday') d.setDate(d.getDate()-1);
+  document.getElementById('nDateFilter').value=d.toISOString().slice(0,10);
+  nithishRender();
+}
 async function nithishBoot(){
   document.getElementById('nResults').innerHTML='<div class="empty">Loading…</div>';
   try{
@@ -1501,7 +1512,12 @@ function nithishCard(jc){
 function nithishRender(){
   var search=(document.getElementById('nSearch').value||'').trim().toLowerCase();
   var flagFilter=document.getElementById('nFlagFilter').value;
+  var dateVal=document.getElementById('nDateFilter').value; // '' = all dates
   var list=N_ALL.filter(function(jc){
+    if(dateVal){
+      if(!jc.latest_status_date) return false;
+      if(String(jc.latest_status_date).slice(0,10)!==dateVal) return false;
+    }
     if(flagFilter && jc.flag_reason!==flagFilter) return false;
     if(search){
       var hay=[jc.job_card_number,jc.reg_number,jc.hub,jc.technician].join(' ').toLowerCase();
