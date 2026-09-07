@@ -138,7 +138,7 @@ tr.row-flag:hover{background:#fee2e2}
   <button id="hqtab-queue-btn" class="hqtab-btn active" onclick="hqTab('queue')">Queue</button>
   <button id="hqtab-perf-btn" class="hqtab-btn" onclick="hqTab('perf')">Performance</button>
   <button id="hqtab-quality-btn" class="hqtab-btn" onclick="hqTab('quality')">Approval Quality</button>
-  <button id="hqtab-nithish-btn" class="hqtab-btn" onclick="hqTab('nithish')">Nithish Approval</button>
+  <button id="hqtab-nithish-btn" class="hqtab-btn" onclick="hqTab('nithish')">Special Approval</button>
 </div>
 
 <div id="hqtab-queue">
@@ -1399,7 +1399,7 @@ function qualityRender(){
   document.getElementById('qResults').innerHTML=html;
 }
 
-// ══════════════════ Nithish Approval tab ══════════════════
+// ══════════════════ Special Approval tab ══════════════════
 let N_ALL=[];
 async function nithishBoot(){
   document.getElementById('nResults').innerHTML='<div class="empty">Loading…</div>';
