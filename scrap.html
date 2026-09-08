@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Scrap Management — Bounce Service Info</title>
+  <title>Bounce Back — Bounce Service Info</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link rel="stylesheet" href="bounce-theme.css?v=1780722254"/>
@@ -179,7 +179,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="page-title"><i class="ti ti-recycle"></i> Scrap Management</div>
+  <div class="page-title"><i class="ti ti-recycle"></i> Bounce Back</div>
   <div class="page-sub">Scrap is auto-generated from Wear &amp; Tear part replacements — no manual counting. Log a vendor sale when a pickup happens.</div>
 
   <div class="ctl-bar">
@@ -202,10 +202,10 @@
   <div id="loadFailWarn" class="warn-box" style="display:none;background:#fef2f2;border-color:#fca5a5;color:#991b1b;"></div>
 
   <div class="scrap-tabs" role="tablist">
-    <button class="scrap-tab active" id="tabBtn-scrap" onclick="switchScrapTab('scrap')">SCRAP</button>
-    <button class="scrap-tab" id="tabBtn-parts" onclick="switchScrapTab('parts')">REFURB &amp; TYRE</button>
+    <button class="scrap-tab active" id="tabBtn-scrap" onclick="switchScrapTab('scrap')">THE RECOVERY ZONE (SCRAP)</button>
+    <button class="scrap-tab" id="tabBtn-parts" onclick="switchScrapTab('parts')">THE COMEBACK LANE (REFURB &amp; TYRE)</button>
     <button class="scrap-tab" id="tabBtn-logmovement" onclick="switchScrapTab('logmovement')">LOG A MOVEMENT</button>
-    <button class="scrap-tab" id="tabBtn-mgmt" onclick="switchScrapTab('mgmt')">MANAGEMENT</button>
+    <button class="scrap-tab" id="tabBtn-mgmt" onclick="switchScrapTab('mgmt')">THE SCOREBOARD</button>
     <button class="scrap-tab" id="tabBtn-financeapproval" onclick="switchScrapTab('financeapproval')">FINANCE APPROVAL <span id="aqCountTab" class="pending-flag" style="font-size:11px;margin-left:2px"></span></button>
   </div>
 
@@ -218,6 +218,8 @@
     </div>
     <div id="hub-trigger-list" style="font-size:12px"></div>
   </div>
+
+  <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-6px 0 14px">From worn to worth it.</div>
 
   <div class="panel">
     <h3><i class="ti ti-building-warehouse"></i> Hub Performance <span style="font-weight:400;font-size:11px;color:var(--muted)">(Est./Backlog are all-time; Sold/Revenue are for the date range above — click a hub to filter everything above to it)</span></h3>
@@ -251,6 +253,7 @@
   <div id="subPane-Refurb">
   <div class="panel" style="padding:16px">
     <h3><i class="ti ti-recycle"></i> Refurb — Consumed / Actual in Hub / RPDC / Vendor / Refurbed / Rejected</h3>
+    <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-4px 0 12px">Nothing wasted. Everything bounces back.</div>
     <div class="funnel-kpis">
       <div class="funnel-kpi"><div class="fk-label">Recovery %</div><div class="fk-val" id="funnelRecovery-Refurb">—</div></div>
       <div class="funnel-kpi"><div class="fk-label">Rejection %</div><div class="fk-val" id="funnelRejection-Refurb">—</div></div>
@@ -279,6 +282,7 @@
   <div id="subPane-Tyre" style="display:none">
   <div class="panel" style="padding:16px">
     <h3><i class="ti ti-circle-dot"></i> Tyre — Consumed / Actual in Hub / RPDC / Vendor / CN Approved / CN Rejected</h3>
+    <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-4px 0 12px">From worn to worth it.</div>
     <div class="funnel-kpis">
       <div class="funnel-kpi"><div class="fk-label">Recovery %</div><div class="fk-val" id="funnelRecovery-Tyre">—</div></div>
       <div class="funnel-kpi"><div class="fk-label">Rejection %</div><div class="fk-val" id="funnelRejection-Tyre">—</div></div>
