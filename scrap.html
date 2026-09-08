@@ -584,6 +584,11 @@ let _hadFailure = false;
 
 function fmtC(n) { return (n == null || isNaN(n)) ? '—' : '₹' + Math.round(n).toLocaleString('en-IN'); }
 function fmtN(n) { return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('en-IN'); }
+// Vendor name is genuinely free-typed by any user adding a vendor, then
+// gets inserted into <option> tags via innerHTML in a couple of places --
+// unlike hub/category/part names (fixed admin-managed lists), this one
+// needs real HTML-escaping, not just a quote-replace for an attribute.
+function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function todayIST() { return new Date(Date.now()+5.5*3600*1000).toISOString().slice(0,10); }
 
 async function sbGet(path, attempt) {
@@ -844,7 +849,7 @@ async function onVendorChangeBulk() {
 async function loadVendors() {
   VENDORS = await sbGet('scrap_vendors?select=*&approved=eq.true&order=vendor_name.asc');
   const sel = document.getElementById('s-vendor');
-  sel.innerHTML = '<option value="">— select or add via Manage Vendors —</option>' + VENDORS.map(v => `<option value="${v.id}">${v.vendor_name}</option>`).join('');
+  sel.innerHTML = '<option value="">— select or add via Manage Vendors —</option>' + VENDORS.map(v => `<option value="${v.id}">${esc(v.vendor_name)}</option>`).join('');
 }
 
 async function openVendorManager() {
@@ -1425,7 +1430,7 @@ async function loadSales(from, to, city, hub) {
 function populateTxFilterOptions() {
   const vSel = document.getElementById('txVendor');
   if (vSel && vSel.options.length <= 1) {
-    vSel.innerHTML = '<option value="">All vendors</option>' + VENDORS.map(v => `<option value="${v.id}">${v.vendor_name}</option>`).join('');
+    vSel.innerHTML = '<option value="">All vendors</option>' + VENDORS.map(v => `<option value="${v.id}">${esc(v.vendor_name)}</option>`).join('');
   }
   const cSel = document.getElementById('txCategory');
   if (cSel && cSel.options.length <= 1) {
@@ -1649,7 +1654,9 @@ function checkEditVariance() {
 function openEditMovement(row) {
   EDIT_MV_ROW = row;
   const isScrap = row.movement_type === 'Scrap';
-  document.getElementById('edit-mv-sub').textContent = `${row.movement_type} — ${row.category || row.part_name} — ${row.hub_name} — ${row.pickup_date}`;
+  const wasApproved = row.ho_ack_status === 'Acknowledged';
+  document.getElementById('edit-mv-sub').textContent = `${row.movement_type} — ${row.category || row.part_name} — ${row.hub_name} — ${row.pickup_date}`
+    + (wasApproved ? ' — ⚠ Already Approved: saving will reopen this for approval again' : '');
   document.getElementById('edit-mv-qty-label').textContent = 'Actual Qty (nos)';
   document.getElementById('edit-mv-qty').value = row.actual_qty_nos ?? '';
   document.getElementById('edit-mv-weight').value = row.actual_weight_kg ?? '';
@@ -1702,13 +1709,24 @@ async function saveEditedMovement() {
     variance_remark: remark || null
   };
   if (isScrap) { body.rate = rate; }
+  // A movement's numbers can change after Finance already acknowledged it
+  // (e.g. Qty 100 -> 150 post-approval) -- that must never sit under the
+  // OLD approval as if nothing changed. Editing an approved movement always
+  // reopens it for a fresh approval, same as if it had never been approved.
+  if (row.ho_ack_status === 'Acknowledged') {
+    body.ho_ack_status = null;
+    body.ho_ack_by = null;
+    body.ho_ack_at = null;
+  }
 
+  const wasReopened = row.ho_ack_status === 'Acknowledged';
   const r = await fetch(`${SB}/rest/v1/scrap_sales?id=eq.${row.id}`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify(body) });
   if (!r.ok) { alert('Could not save: ' + (await r.text()).slice(0,200)); return; }
 
   const msg = document.getElementById('edit-mv-msg');
   msg.style.display = 'inline'; setTimeout(() => msg.style.display = 'none', 1500);
   closeEditMovement();
+  if (wasReopened) alert('Saved. This movement was previously approved -- since the numbers changed, it has been moved back to Pending Approval and needs to be approved again.');
   loadAll();
 }
 
