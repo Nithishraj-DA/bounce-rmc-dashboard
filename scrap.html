@@ -356,7 +356,7 @@
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
         <div>
-          <h3 style="font-size:13px;margin:0 0 8px">Revenue — Weekly</h3>
+          <h3 style="font-size:13px;margin:0 0 8px">Scrap Revenue — Weekly <span style="font-weight:400;font-size:11px;color:var(--muted)">(Scrap sales only — excludes Refurb/Tyre)</span></h3>
           <canvas id="mgmt-chart-revenue" height="110"></canvas>
         </div>
         <div>
@@ -1283,7 +1283,7 @@ function mgmtRenderCharts(weeks) {
   MGMT_REVENUE_CHART = new Chart(revCtx, {
     type: 'line',
     data: { labels, datasets: [{
-      label: 'Revenue (₹)', data: weeks.map(w => w.revenue),
+      label: 'Scrap Revenue (₹)', data: weeks.map(w => w.revenue),
       borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.08)', fill: true, tension: 0.25, pointRadius: 3
     }] },
     options: { responsive: true, plugins: { legend: { display: false } },
