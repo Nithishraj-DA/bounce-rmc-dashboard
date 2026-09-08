@@ -2334,7 +2334,7 @@ function ptRenderType(type) {
   const colCount = type === 'Scrap' ? 9 : 11;
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="${colCount}" class="empty">No ${type.toLowerCase()} data for this range/filter.</td></tr>`; return; }
 
-  const inp = (cls, val) => ptCanEdit ? `<input type="number" class="${cls}" value="${val ?? ''}">` : `<span class="num ${val == null ? 'muted-cell' : ''}">${val ?? '—'}</span>`;
+  const inp = (cls, val) => ptCanEdit ? `<input type="number" class="${cls}" value="${val ?? ''}" style="width:70px">` : `<span class="num ${val == null ? 'muted-cell' : ''}">${val ?? '—'}</span>`;
   const cnDocCell = (row) => {
     const viewLink = row.cn_document_url
       ? `<a href="${row.cn_document_url}" target="_blank" rel="noopener" style="font-size:11px;display:block;margin-bottom:3px">📄 View</a>`
