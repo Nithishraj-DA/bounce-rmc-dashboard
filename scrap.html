@@ -222,16 +222,6 @@
   <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-6px 0 14px">From worn to worth it.</div>
 
   <div class="panel">
-    <h3><i class="ti ti-building-warehouse"></i> Hub Performance <span style="font-weight:400;font-size:11px;color:var(--muted)">(Est./Backlog are all-time; Sold/Revenue are for the date range above — click a hub to filter everything above to it)</span></h3>
-    <div style="overflow-x:auto">
-    <table id="hubPerfTable">
-      <thead><tr><th>Hub</th><th class="num">Est. Generated (all-time)</th><th class="num">Backlog %</th><th class="num">Sold (this range)</th><th class="num">Revenue (this range)</th></tr></thead>
-      <tbody id="hubPerfBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
-    </table>
-    </div>
-  </div>
-
-  <div class="panel">
     <h3>By Category <span style="font-weight:400;font-size:11px;color:var(--muted)">(Est./Backlog are all-time cumulative; Sold/Revenue are for the date range above — click a row to see its parts)</span>
       <span class="table-tools"><button class="btn secondary" style="padding:4px 10px;font-size:11px" onclick="exportCategoryCSV()">⬇ CSV</button></span>
     </h3>
@@ -1374,26 +1364,6 @@ function mgmtRenderLeaderboard(rows) {
   wrap.innerHTML = html;
 }
 
-async function loadHubPerformance(from, to, city) {
-  const rows = await rpc('get_scrap_hub_performance', { p_from: from, p_to: to, p_city: city }) || [];
-  const tbody = document.getElementById('hubPerfBody');
-  tbody.innerHTML = rows.length ? rows.map(h => {
-    const varClass = h.variance_pct != null && h.variance_pct > 20 ? 'pending-flag' : '';
-    return `<tr class="cat-row" onclick="filterToHub('${h.hub_name.replace(/'/g,"\\'")}')">
-      <td>${h.hub_name}</td>
-      <td class="num">${fmtN(h.estimated)} kg</td>
-      <td class="num">${h.variance_pct != null ? `<span style="padding:2px 8px;border-radius:5px;font-weight:600;${heatColor(h.variance_pct)}">${h.variance_pct}%</span>` : '—'}</td>
-      <td class="num">${fmtN(h.sold)} kg</td>
-      <td class="num">${fmtC(h.revenue)}</td>
-    </tr>`;
-  }).join('') : `<tr><td colspan="5">${emptyState('🏢', 'No hub data for this range/filter.', 'Try widening the date range above.')}</td></tr>`;
-}
-function filterToHub(hubName) {
-  const sel = document.getElementById('f-hub');
-  if (sel) { sel.value = hubName; }
-  loadAll();
-}
-
 async function loadAll() {
   _hadFailure = false;
   const from = document.getElementById('f-from').value;
@@ -1401,14 +1371,12 @@ async function loadAll() {
   const city = document.getElementById('f-city').value || null;
   const hub = document.getElementById('f-hub').value || null;
   document.getElementById('syncedLbl').textContent = 'Loading…';
-  document.getElementById('hubPerfBody').innerHTML = skeletonRows(5, 3);
   document.getElementById('catBody').innerHTML = skeletonRows(7, 4);
   document.getElementById('aqBody').innerHTML = skeletonRows(7, 2);
   document.getElementById('salesBody').innerHTML = skeletonRows(11, 4);
 
   const [summaryResult] = await Promise.all([
     rpc('get_scrap_summary', { p_from: from, p_to: to, p_city: city, p_hub: hub }),
-    loadHubPerformance(from, to, city),
     loadApprovalQueue(city, hub),
     ptLoadAndRender(from, to, city, hub),
     loadSales(from, to, city, hub),
