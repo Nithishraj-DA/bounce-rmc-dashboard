@@ -382,8 +382,8 @@
       </div>
       <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
       <table>
-        <thead><tr><th>Date</th><th>Hub</th><th>Type</th><th>Category/Part</th><th>Vendor</th><th class="num">Qty/Wt</th><th class="num">Rate</th><th class="num">Value (₹)</th><th>Status</th><th>Finance Approval</th><th>Actions</th></tr></thead>
-        <tbody id="salesBody"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody>
+        <thead><tr><th>Date</th><th>Hub</th><th>Type</th><th>Category/Part</th><th>Vendor</th><th class="num">System Calculated</th><th class="num">Qty/Wt</th><th class="num">Rate</th><th class="num">Value (₹)</th><th>Status</th><th>Finance Approval</th><th>Actions</th></tr></thead>
+        <tbody id="salesBody"><tr><td colspan="12" class="empty">Loading…</td></tr></tbody>
       </table>
       </div>
     </div>
@@ -1553,6 +1553,7 @@ function renderSalesRows(rows, capGroups) {
         <td><span class="status-pill" style="background:${first.movement_type==='Refurb'?'#e0e7ff':first.movement_type==='Tyre'?'#dcfce7':'#fef3c7'};color:${first.movement_type==='Refurb'?'#3730a3':first.movement_type==='Tyre'?'#166534':'#92400e'}">${first.movement_type||'Scrap'}</span></td>
         <td>${multi ? `<span class="cat-toggle" onclick="toggleMovementGroup('${groupId}')"><i class="ti ti-chevron-right" id="${groupId}-icon"></i> ${labelText}</span>` : labelText}</td>
         <td>${(first.scrap_vendors && first.scrap_vendors.vendor_name) || '—'}</td>
+        <td class="num">${multi ? '—' : fmtN(first.system_calculated)}</td>
         <td class="num">${multi ? '—' : fmtN(first.qty_or_weight)}</td>
         <td class="num">${multi ? '—' : fmtC(first.rate)}</td>
         <td class="num">${fmtC(totalValue)}</td>
@@ -1582,6 +1583,7 @@ function renderSalesRows(rows, capGroups) {
         <td></td><td></td><td></td>
         <td style="padding-left:26px;color:var(--muted)">${r.category || r.part_name}</td>
         <td></td>
+        <td class="num" style="color:var(--muted)">${fmtN(r.system_calculated)}</td>
         <td class="num">${fmtN(r.qty_or_weight)}</td>
         <td class="num">${fmtC(r.rate)}</td>
         <td class="num">${fmtC(r.total_value)}</td>
