@@ -218,48 +218,6 @@
     </div>
     <div id="hub-trigger-list" style="font-size:12px"></div>
   </div>
-  <div class="scope-legend">
-    <b>How to read the numbers below:</b>
-    <span class="scope-chip scope-alltime">All-time</span> figures (Est. Generated, Backlog) never reset and ignore the "From" date — they answer "how much is outstanding right now?"
-    <span class="scope-chip scope-range">This range</span> figures (Sold, Revenue) respect the date filter above — they answer "what happened in this window?"
-    <span class="scope-chip scope-discrepancy">Discrepancy</span> is a different thing entirely — it's how far one single movement was from its own expected quantity, not a category-wide total.
-  </div>
-  <div class="kpi-group-label kpi-group-alltime">Backlog — All-Time, not affected by the date range above</div>
-  <div class="kpi-row kpi-row-alltime">
-    <div class="kpi">
-      <div class="kl"><i class="ti ti-scale"></i> Est. Scrap Generated
-        <span class="info-dot" title="Estimated using standard reference weights for parts marked Scrap on job cards, cumulative all-time as of the selected To date. This is a running backlog figure, not bound to the From date — a shorter date range won't make this number smaller.">ⓘ</span>
-      </div>
-      <div class="kv" id="kvGenerated">—</div>
-      <div class="ks">kg</div>
-    </div>
-    <div class="kpi">
-      <div class="kl"><i class="ti ti-arrows-diff"></i> Outstanding Backlog
-        <span class="info-dot" title="Backlog is cumulative and compares to cumulative Scrap Sold (not the period-scoped Sold figure below) — so it can only go negative if more has genuinely been sold than was ever generated.">ⓘ</span>
-      </div>
-      <div class="kv" id="kvVariance">—</div>
-      <div class="ks">Cumulative generated − cumulative sold, as of To date</div>
-    </div>
-    <div class="kpi"><div class="kl"><i class="ti ti-percentage"></i> Backlog %</div><div class="kv" id="kvVariancePct">—</div></div>
-  </div>
-
-  <div class="kpi-group-label kpi-group-range">Activity — This Date Range Only</div>
-  <div class="kpi-row kpi-row-range">
-    <div class="kpi"><div class="kl"><i class="ti ti-truck-delivery"></i> Scrap Sold</div><div class="kv" id="kvSold">—</div><div class="ks">kg</div></div>
-    <div class="kpi"><div class="kl"><i class="ti ti-cash-banknote"></i> Scrap Revenue</div><div class="kv" id="kvRevenue">—</div></div>
-    <div class="kpi"><div class="kl"><i class="ti ti-clipboard-check"></i> Finance Pending</div><div class="kv" id="kvPendingAck">—</div></div>
-  </div>
-
-  <div class="panel" id="reconPanel">
-    <h3><i class="ti ti-git-branch"></i> Scrap Reconciliation <span style="font-weight:400;font-size:11px;color:var(--muted)">(cumulative, all-time as of the To date above — not limited to the From/To window)</span></h3>
-    <div class="recon-flow">
-      <div class="recon-step"><div class="recon-label">Total Generated (all-time)</div><div class="recon-val" id="reconEst">—</div></div>
-      <div class="recon-arrow">→</div>
-      <div class="recon-step"><div class="recon-label">Total Sold (all-time)</div><div class="recon-val" id="reconActual">—</div></div>
-      <div class="recon-arrow">→</div>
-      <div class="recon-step recon-variance"><div class="recon-label">Outstanding Backlog</div><div class="recon-val" id="reconVar">—</div><div class="recon-pct" id="reconPct">—</div></div>
-    </div>
-  </div>
 
   <div class="panel">
     <h3><i class="ti ti-building-warehouse"></i> Hub Performance <span style="font-weight:400;font-size:11px;color:var(--muted)">(Est./Backlog are all-time; Sold/Revenue are for the date range above — click a hub to filter everything above to it)</span></h3>
@@ -1502,25 +1460,10 @@ function exportCatDrillCSV() {
 
 function renderSummary() {
   if (!SUMMARY) {
-    document.getElementById('kvGenerated').innerHTML = '<span style="color:var(--red);font-size:14px">Failed</span>';
-    document.getElementById('kvSold').innerHTML = '<span style="color:var(--red);font-size:14px">Failed</span>';
-    document.getElementById('kvRevenue').innerHTML = '<span style="color:var(--red);font-size:14px">Failed</span>';
-    document.getElementById('kvVariance').innerHTML = '<span style="color:var(--red);font-size:14px">Failed</span>';
-    document.getElementById('kvVariancePct').innerHTML = '<span style="color:var(--red);font-size:14px">Failed</span>';
     document.getElementById('catBody').innerHTML = '<tr><td colspan="6" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
     return;
   }
   const byCat = SUMMARY.by_category || [];
-  document.getElementById('kvGenerated').textContent = fmtN(SUMMARY.total_estimated_qty) + ' kg';
-  document.getElementById('kvSold').textContent = fmtN(SUMMARY.total_period_sold_qty) + ' kg';
-  document.getElementById('kvRevenue').textContent = fmtC(SUMMARY.total_revenue);
-  document.getElementById('kvVariance').textContent = fmtN(SUMMARY.total_variance_qty) + ' kg';
-  document.getElementById('kvVariancePct').textContent = SUMMARY.total_variance_pct != null ? SUMMARY.total_variance_pct + '%' : '—';
-
-  document.getElementById('reconEst').textContent = fmtN(SUMMARY.total_estimated_qty) + ' kg';
-  document.getElementById('reconActual').textContent = fmtN(SUMMARY.total_actual_qty) + ' kg';
-  document.getElementById('reconVar').textContent = fmtN(SUMMARY.total_variance_qty) + ' kg';
-  document.getElementById('reconPct').textContent = SUMMARY.total_variance_pct != null ? SUMMARY.total_variance_pct + '% of estimated' : '';
 
   document.getElementById('catBody').innerHTML = byCat.length ? byCat.map(c => {
     const genCell = c.tracking_type === 'weight'
@@ -1541,17 +1484,6 @@ function renderSummary() {
 
 let LAST_SALES_ROWS = [];
 async function loadSales(from, to, city, hub) {
-  // Finance Pending KPI still respects the selected date range/filters --
-  // the Transactions table itself defaults to the latest 10 regardless of
-  // the range picked above, but searching/filtering looks across a wider
-  // cached window (300 rows) rather than triggering a fresh query per
-  // keystroke.
-  let countQ = `scrap_sales?select=id&pickup_date=gte.${from}&pickup_date=lte.${to}&ho_ack_status=neq.Acknowledged&status=neq.Cancelled`;
-  if (city) countQ += `&city=eq.${encodeURIComponent(city)}`;
-  if (hub) countQ += `&hub_name=eq.${encodeURIComponent(hub)}`;
-  const pendingRows = await sbGet(countQ);
-  document.getElementById('kvPendingAck').textContent = pendingRows.length;
-
   let q = `scrap_sales?select=*,scrap_vendors(vendor_name)&order=created_at.desc&limit=300`;
   if (city) q += `&city=eq.${encodeURIComponent(city)}`;
   if (hub) q += `&hub_name=eq.${encodeURIComponent(hub)}`;
