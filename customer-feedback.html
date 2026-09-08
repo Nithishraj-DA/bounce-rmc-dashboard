@@ -220,9 +220,10 @@ function renderRaw(raw,total){
     return '<tr><td>'+esc(r.city)+'</td><td>'+esc(r.hub)+'</td><td>'+esc(TYPE[r.submission_type]||r.submission_type||'')+'</td>'+
       '<td class="num"><span class="rpill" style="background:'+rBg(r.rating)+';color:'+rColor(r.rating)+'">'+r.rating+'</span></td>'+
       '<td class="wrap-c">'+esc(r.comment||'')+'</td><td>'+esc(r.submitted_at)+'</td>'+
-      '<td>'+esc(r.reg_number||'—')+'</td><td>'+esc(r.rider_name||'—')+'</td><td>'+esc(r.rider_number||'—')+'</td></tr>';
+      '<td>'+esc(r.reg_number||'—')+'</td><td>'+esc(r.rider_name||'—')+'</td><td>'+esc(r.rider_number||'—')+'</td>'+
+      '<td>'+esc(r.job_card_number||'—')+'</td><td class="num">'+(r.tat_minutes!=null?r.tat_minutes:'—')+'</td></tr>';
   }).join('');
-  el.innerHTML='<table><thead><tr><th>City</th><th>Hub</th><th>Submission Type</th><th class="num">Rating</th><th>Comment</th><th>Submitted</th><th>Reg Number</th><th>Rider Name</th><th>Rider Number</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  el.innerHTML='<table><thead><tr><th>City</th><th>Hub</th><th>Submission Type</th><th class="num">Rating</th><th>Comment</th><th>Submitted</th><th>Reg Number</th><th>Rider Name</th><th>Rider Number</th><th>Job Card No.</th><th class="num">TAT (mins)</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
 function deltaCell(d){
   if(d==null) return '<span class="delta-flat">—</span>';
