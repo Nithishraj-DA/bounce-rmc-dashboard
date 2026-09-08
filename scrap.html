@@ -1893,7 +1893,7 @@ async function createBatchInner() {
   const date = document.getElementById('s-date').value;
   const vendorId = document.getElementById('s-vendor').value || null;
 
-  if (!hub || !date) { alert('Hub and Pickup Date are required.'); return; }
+  if (!city || !hub || !date) { alert('City, Hub, and Pickup Date are all required.'); return; }
 
   const rows = [...document.querySelectorAll('#s-rows-tbody tr[data-category], #s-rows-tbody tr[data-part]')];
   const filled = [];
