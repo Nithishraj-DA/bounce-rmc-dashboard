@@ -399,7 +399,7 @@
       </table>
     </div>
     <div id="s-grand-total" style="display:none;font-size:14px;font-weight:700;margin-top:10px;padding:8px 12px;background:#fef2f2;border-radius:8px">Grand Total: ₹0</div>
-    <button class="btn" style="margin-top:12px" onclick="createBatch()"><i class="ti ti-file-download"></i> Save &amp; Download PDF</button>
+    <button class="btn" id="btn-create-batch" style="margin-top:12px" onclick="createBatch()"><i class="ti ti-file-download"></i> Save &amp; Download PDF</button>
       <span class="save-msg" id="saveMsg" style="color:#16a34a;font-size:11px;display:none">Saved ✓</span>
   </div>
 
@@ -859,13 +859,20 @@ async function renderVendorManager() {
   const ratesByVendor = {};
   (rates||[]).forEach(r => { (ratesByVendor[r.vendor_id] ||= {})[r.category] = r.rate; });
   const body = document.getElementById('vendor-list-body');
-  body.innerHTML = allVendors.length ? allVendors.map(v => `
-    <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
+  const canApprove = isScrapPowerUser();
+  const pending = allVendors.filter(v => !v.approved);
+  const approved = allVendors.filter(v => v.approved);
+  const vendorCard = (v) => `
+    <div style="border:1px solid ${v.approved ? 'var(--border)' : '#fca5a5'};border-radius:10px;padding:12px;margin-bottom:12px;${v.approved ? '' : 'background:#fef2f2'}">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px">
         <div class="fg"><label>Name</label><input type="text" value="${(v.vendor_name||'').replace(/"/g,'&quot;')}" id="vn-${v.id}" style="width:150px"></div>
         <div class="fg"><label>Contact</label><input type="text" value="${(v.contact||'').replace(/"/g,'&quot;')}" id="vc-${v.id}" style="width:120px"></div>
         <div class="fg"><label>GST</label><input type="text" value="${(v.gstin||'').replace(/"/g,'&quot;')}" id="vg-${v.id}" style="width:140px"></div>
         <button class="btn secondary" style="padding:5px 10px;font-size:11px" onclick="saveVendorInfo(${v.id})">Save Info</button>
+        ${v.approved
+          ? '<span style="align-self:center;font-size:11px;font-weight:600;color:#15803d;background:#dcfce7;padding:3px 8px;border-radius:6px">✓ Approved</span>'
+          : (canApprove ? `<button class="btn" style="padding:5px 10px;font-size:11px;background:#16a34a" onclick="approveVendor(${v.id})">Approve Vendor</button>` : '<span style="align-self:center;font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;padding:3px 8px;border-radius:6px">Pending Approval</span>')
+        }
       </div>
       <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Rate card (₹ per unit)</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -876,7 +883,22 @@ async function renderVendorManager() {
         <button class="btn secondary" style="padding:5px 10px;font-size:11px;align-self:flex-end" onclick="saveVendorRates(${v.id})">Save Rates</button>
       </div>
     </div>
-  `).join('') : '<div class="empty">No vendors yet — add one above.</div>';
+  `;
+  let html = '';
+  if (pending.length) {
+    html += `<div style="font-size:12px;font-weight:600;color:#b91c1c;margin-bottom:8px">⚠ Pending Approval (${pending.length}) — not selectable for movements until approved</div>`;
+    html += pending.map(vendorCard).join('');
+    html += '<div style="border-top:1px solid var(--border);margin:16px 0"></div>';
+  }
+  body.innerHTML = html + (approved.length ? approved.map(vendorCard).join('') : (pending.length ? '' : '<div class="empty">No vendors yet — add one above.</div>'));
+}
+
+async function approveVendor(id) {
+  if (!isScrapPowerUser()) return;
+  const who = getCurrentUser().email || 'unknown';
+  await fetch(`${SB}/rest/v1/scrap_vendors?id=eq.${id}`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ approved: true, approved_by: who, approved_at: new Date().toISOString() }) });
+  await renderVendorManager();
+  await loadVendors();
 }
 
 async function addVendorFull() {
@@ -884,7 +906,11 @@ async function addVendorFull() {
   if (!name) return;
   const contact = document.getElementById('v-contact').value.trim();
   const gst = document.getElementById('v-gst').value.trim();
-  await fetch(`${SB}/rest/v1/scrap_vendors`, { method:'POST', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ vendor_name: name, contact: contact||null, gstin: gst||null, approved: true }) });
+  // Not auto-approved: a new vendor is a real business-control point (who
+  // you're paying and where scrap actually goes), not just a form entry --
+  // it now needs an explicit Approve action before it's selectable for a
+  // movement (see the approved=eq.true filter on the vendor dropdown).
+  await fetch(`${SB}/rest/v1/scrap_vendors`, { method:'POST', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ vendor_name: name, contact: contact||null, gstin: gst||null, approved: false }) });
   document.getElementById('v-name').value=''; document.getElementById('v-contact').value=''; document.getElementById('v-gst').value='';
   await renderVendorManager();
   await loadVendors();
@@ -1545,7 +1571,12 @@ async function uploadGstForGroup(input, ids) {
   if (!file) return;
   const url = await uploadScrapPhoto(file);
   if (!url) { alert('Upload failed — try again.'); return; }
-  await Promise.all(ids.map(async id => fetch(`${SB}/rest/v1/scrap_sales?id=eq.${id}`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ gst_invoice_url: url }) })));
+  // A single PATCH matching all ids is one atomic SQL UPDATE -- either every
+  // row in the batch gets the invoice or none do, unlike firing one request
+  // per row in parallel, where a mid-batch failure leaves some rows updated
+  // and others not with no way to tell from the UI that it happened.
+  const r = await fetch(`${SB}/rest/v1/scrap_sales?id=in.(${ids.join(',')})`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ gst_invoice_url: url }) });
+  if (!r.ok) { alert('Could not attach invoice to the batch: ' + (await r.text()).slice(0,200)); return; }
   loadAll();
 }
 
@@ -1553,7 +1584,8 @@ async function approveMovementGroup(ids) {
   const who = getCurrentUser().email || prompt('Enter your name/email for this approval:');
   if (!who) return;
   const now = new Date().toISOString();
-  await Promise.all(ids.map(async id => fetch(`${SB}/rest/v1/scrap_sales?id=eq.${id}`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ ho_ack_status:'Acknowledged', ho_ack_by: who, ho_ack_at: now }) })));
+  const r = await fetch(`${SB}/rest/v1/scrap_sales?id=in.(${ids.join(',')})`, { method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}), body: JSON.stringify({ ho_ack_status:'Acknowledged', ho_ack_by: who, ho_ack_at: now }) });
+  if (!r.ok) { alert('Approval failed — nothing in this batch was approved:\n' + (await r.text()).slice(0,200)); return; }
   loadAll();
 }
 
@@ -1566,10 +1598,11 @@ async function cancelMovementGroup(ids) {
   if (!reason || !reason.trim()) { alert('A reason is required to cancel a movement.'); return; }
   const who = getCurrentUser().email || 'unknown';
   const now = new Date().toISOString();
-  await Promise.all(ids.map(async id => fetch(`${SB}/rest/v1/scrap_sales?id=eq.${id}`, {
+  const r = await fetch(`${SB}/rest/v1/scrap_sales?id=in.(${ids.join(',')})`, {
     method:'PATCH', headers: await authHDR({'Content-Type':'application/json'}),
     body: JSON.stringify({ status:'Cancelled', cancellation_reason: reason.trim(), cancelled_by: who, cancelled_at: now })
-  })));
+  });
+  if (!r.ok) { alert('Cancellation failed — nothing in this batch was cancelled:\n' + (await r.text()).slice(0,200)); return; }
   loadAll();
 }
 
@@ -1778,7 +1811,24 @@ async function suggestNextPeriod() {
   } catch (e) { console.error('suggestNextPeriod failed', e); }
 }
 
+let CREATE_BATCH_IN_PROGRESS = false;
 async function createBatch() {
+  if (CREATE_BATCH_IN_PROGRESS) return; // guards against a double-click firing two saves
+  CREATE_BATCH_IN_PROGRESS = true;
+  const btn = document.getElementById('btn-create-batch');
+  const originalLabel = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i> Saving…'; }
+  try {
+    await createBatchInner();
+  } finally {
+    // finally guarantees this runs on every exit path -- validation
+    // failures, thrown errors, and the success path alike -- so the button
+    // can never get stuck disabled from an exception we didn't anticipate.
+    CREATE_BATCH_IN_PROGRESS = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
+}
+async function createBatchInner() {
   const type = document.getElementById('s-type').value;
   const isScrap = type === 'Scrap';
   const hub = document.getElementById('s-hub').value;
@@ -1858,9 +1908,30 @@ async function createBatch() {
   const vendorName = vendorId ? ((VENDORS.find(v=>String(v.id)===String(vendorId))||{}).vendor_name) : null;
 
   // Upload each row's own photo first (kept separate per row per requirement)
+  const photoFailed = [];
   for (const f of filled) {
     f.photoDataUrl = await fileToDataURL(f.photoFile);
     f.photoUrl = await uploadScrapPhoto(f.photoFile);
+    if (!f.photoUrl) photoFailed.push(f.category || f.partName);
+  }
+  // Photo is a required control, not a nice-to-have -- if the upload itself
+  // failed (network blip, storage issue), the movement must NOT be saved
+  // with a null photo_url. That would silently create an unevidenced
+  // financial record while the UI still claims evidence was required.
+  if (photoFailed.length) {
+    // Clean up any photos that DID upload successfully in this same batch
+    // attempt -- otherwise a partial failure leaves orphan files in storage
+    // that are never linked to any saved movement.
+    for (const f of filled) {
+      if (f.photoUrl) {
+        try {
+          const path = f.photoUrl.split('/scrap-photos/')[1];
+          if (path) await fetch(`${SB}/storage/v1/object/scrap-photos/${path}`, { method: 'DELETE', headers: await authHDR() });
+        } catch (e) { console.error('orphan photo cleanup failed', e); }
+      }
+    }
+    alert('Could not upload photo for:\n\n' + photoFailed.join('\n') + '\n\nThe movement was NOT saved -- nothing was recorded without evidence. Please try again (check your connection), or retake the photo(s) if they failed to load.');
+    return;
   }
 
   const batchId = 'BATCH-' + Date.now().toString().slice(-6);
@@ -1876,7 +1947,20 @@ async function createBatch() {
   }));
 
   const r = await fetch(`${SB}/rest/v1/scrap_sales`, { method:'POST', headers: await authHDR({'Content-Type':'application/json','Prefer':'return=representation'}), body: JSON.stringify(bodyArr) });
-  if (!r.ok) { alert('Could not save: ' + (await r.text()).slice(0,200)); return; }
+  if (!r.ok) {
+    // Every photo uploaded fine, but the movement itself failed to save --
+    // clean those up too, same reasoning as the upload-failure path above.
+    for (const f of filled) {
+      if (f.photoUrl) {
+        try {
+          const path = f.photoUrl.split('/scrap-photos/')[1];
+          if (path) await fetch(`${SB}/storage/v1/object/scrap-photos/${path}`, { method: 'DELETE', headers: await authHDR() });
+        } catch (e) { console.error('orphan photo cleanup failed', e); }
+      }
+    }
+    alert('Could not save: ' + (await r.text()).slice(0,200));
+    return;
+  }
   const saved = await r.json();
 
   const msg = document.getElementById('saveMsg'); msg.style.display='inline'; setTimeout(()=>msg.style.display='none', 2000);
@@ -2218,7 +2302,7 @@ function ptRenderType(type) {
         <td class="num">${pct}</td>
       </tr>`;
     }
-    return `<tr data-part="${ptEscapeAttr(row.part_name)}" data-cn-doc-existing="${ptEscapeAttr(row.cn_document_url || '')}">
+    return `<tr data-part="${ptEscapeAttr(row.part_name)}" data-cn-doc-existing="${ptEscapeAttr(row.cn_document_url || '')}" data-actual-in-hub="${row.actual_in_hub ?? ''}">
       <td>${row.part_name}</td>
       <td class="num">${row.consumed} ${row.unit}</td>
       <td class="num ${row.actual_in_hub == null ? 'muted-cell' : ''}">${row.actual_in_hub ?? '—'}</td>
@@ -2245,30 +2329,70 @@ async function ptSaveAll(type) {
   const email = getCurrentUser().email || 'unknown';
   const now = new Date().toISOString();
 
-  const payload = [];
-  for (const tr of document.querySelectorAll(`#pt-rowsBody-${type} > tr[data-part]`)) {
+  // Two passes on purpose: validate every row FIRST, with no side effects,
+  // then only start uploading CN documents once we know nothing in this
+  // batch will be rejected. Interleaving upload-then-validate (like the
+  // single-pass version used to) risks uploading a file for row 3 only to
+  // then discover row 1 has an impossible number and block the whole save
+  // -- same orphan-file problem as the Scrap movement flow had.
+  const rowEls = [...document.querySelectorAll(`#pt-rowsBody-${type} > tr[data-part]`)];
+  const violations = [];
+  const toSave = [];
+  for (const tr of rowEls) {
     const part = tr.dataset.part;
     const val = sel => { const el = tr.querySelector(sel); if (!el) return undefined; return el.value === '' ? null : parseFloat(el.value); };
     const rpdc = val('.f-rpdc'), vendor = val('.f-vendor'), outcome = val('.f-outcome'), rejected = val('.f-rejected'),
           recvOutcome = val('.f-recv-outcome'), recvRejected = val('.f-recv-rejected');
+    const actualInHub = tr.dataset.actualInHub !== '' ? parseFloat(tr.dataset.actualInHub) : null;
+    // A pipeline stage can't send/produce more than what actually fed into
+    // it -- these aren't independent numbers, each one is a subset of the
+    // one before it. Only checked when both sides of a given comparison
+    // were actually entered (or, for the first one, when the hub actually
+    // has a known count to compare against) -- a still-blank downstream
+    // field isn't a violation, it just hasn't been filled in yet.
+    if (rpdc != null && actualInHub != null && rpdc > actualInHub) {
+      violations.push(`${part}: Sent to RPDC (${rpdc}) exceeds Actual Available in Hub (${actualInHub})`);
+    }
+    if (vendor != null && rpdc != null && vendor > rpdc) {
+      violations.push(`${part}: Sent to Vendor (${vendor}) exceeds Sent to RPDC (${rpdc})`);
+    }
+    if (outcome != null && rejected != null && vendor != null && (outcome + rejected) > vendor) {
+      violations.push(`${part}: Refurbed + Rejected (${outcome + rejected}) exceeds Sent to Vendor (${vendor})`);
+    }
+    if (recvOutcome != null && outcome != null && recvOutcome > outcome) {
+      violations.push(`${part}: Received at RPDC, refurbed (${recvOutcome}) exceeds Refurbed (${outcome})`);
+    }
+    if (recvRejected != null && rejected != null && recvRejected > rejected) {
+      violations.push(`${part}: Received at RPDC, rejected (${recvRejected}) exceeds Rejected (${rejected})`);
+    }
     const docInput = tr.querySelector('.f-cn-doc');
     const docFile = docInput && docInput.files && docInput.files[0] ? docInput.files[0] : null;
     if ([rpdc, vendor, outcome, rejected, recvOutcome, recvRejected].every(v => v === undefined || v === null) && !docFile) continue;
+    toSave.push({ part, rpdc, vendor, outcome, rejected, recvOutcome, recvRejected, docFile });
+  }
+
+  if (violations.length) {
+    alert('Cannot save — these numbers are not physically possible:\n\n' + violations.join('\n') + '\n\nEach stage can only send or produce as much as it actually received from the stage before it. Please correct the figure(s) above and save again.');
+    return;
+  }
+
+  const payload = [];
+  for (const s of toSave) {
     const row = {
-      period_from: from, period_to: to, city, item_type: type, item_name: part,
-      sent_to_rpdc_qty: rpdc ?? null, sent_to_vendor_qty: vendor ?? null,
-      refurbed_qty: outcome ?? null, rejected_qty: rejected ?? null,
-      received_at_rpdc_qty: recvOutcome ?? null, received_at_rpdc_rejected_qty: recvRejected ?? null,
+      period_from: from, period_to: to, city, item_type: type, item_name: s.part,
+      sent_to_rpdc_qty: s.rpdc ?? null, sent_to_vendor_qty: s.vendor ?? null,
+      refurbed_qty: s.outcome ?? null, rejected_qty: s.rejected ?? null,
+      received_at_rpdc_qty: s.recvOutcome ?? null, received_at_rpdc_rejected_qty: s.recvRejected ?? null,
       updated_by: email, updated_at: now
     };
     // Only touch cn_document_url when a NEW file was actually chosen this
     // save -- merge-duplicates only updates columns present in the row, so
     // omitting it here leaves whatever was already saved untouched instead
     // of accidentally clearing it on every unrelated edit to this part.
-    if (docFile) {
-      const url = await uploadScrapPhoto(docFile);
+    if (s.docFile) {
+      const url = await uploadScrapPhoto(s.docFile);
       if (url) row.cn_document_url = url;
-      else alert(`Could not upload the CN document for "${part}" — the rest of this row will still save.`);
+      else alert(`Could not upload the CN document for "${s.part}" — the rest of this row will still save.`);
     }
     payload.push(row);
   }
