@@ -579,6 +579,7 @@ function isScrapApprover() {
 }
 let REFURB_PARTS = [];
 let VENDORS = [];
+let WEIGHT_ROWS_CACHE = [];
 let SUMMARY = null;
 let _hadFailure = false;
 
@@ -956,8 +957,9 @@ async function renderWeightManager() {
 
   const [missing, existing] = await Promise.all([
     rpc('get_unweighted_parts', {}),
-    sbGet('scrap_part_weights?select=*&order=part_pattern.asc')
+    sbGet('scrap_part_weights?select=*&effective_to=is.null&order=part_pattern.asc')
   ]);
+  WEIGHT_ROWS_CACHE = existing || [];
 
   missingBox.innerHTML = `
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px">
@@ -1023,18 +1025,53 @@ async function saveWeightRow(id) {
   const weight = parseFloat(document.getElementById(`ww-${id}`).value);
   const notes = document.getElementById(`wn-${id}`).value.trim();
   if (!pattern || isNaN(weight)) { alert('Pattern and weight are both required.'); return; }
-  const r = await fetch(`${SB}/rest/v1/scrap_part_weights?id=eq.${id}`, {
+
+  const existingRow = (WEIGHT_ROWS_CACHE || []).find(w => w.id === id);
+  const weightChanged = existingRow && Number(existingRow.weight_kg) !== weight;
+
+  if (!weightChanged) {
+    // Pattern/notes-only edit -- no history implication, just update in place.
+    const r = await fetch(`${SB}/rest/v1/scrap_part_weights?id=eq.${id}`, {
+      method: 'PATCH', headers: await authHDR({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ part_pattern: pattern, notes: notes || null })
+    });
+    if (!r.ok) { alert('Could not save: ' + (await r.text()).slice(0,200)); return; }
+    await renderWeightManager();
+    return;
+  }
+
+  // The weight value itself changed -- this affects a business KPI
+  // (Estimated Generated / Backlog), so it needs to be versioned rather
+  // than silently overwritten: close the old value off as of yesterday
+  // (so every past billing_date keeps using what was true for it) and
+  // open a new one starting today.
+  const reason = prompt(`Changing weight from ${existingRow.weight_kg}kg to ${weight}kg for "${pattern}".\n\nReason for this change (kept for audit):`);
+  if (reason === null) return; // cancelled
+  const who = getCurrentUser().email || 'unknown';
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+
+  const closeR = await fetch(`${SB}/rest/v1/scrap_part_weights?id=eq.${id}`, {
     method: 'PATCH', headers: await authHDR({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ part_pattern: pattern, weight_kg: weight, notes: notes || null })
+    body: JSON.stringify({ effective_to: yesterday, part_pattern: pattern })
   });
-  if (!r.ok) { alert('Could not save: ' + (await r.text()).slice(0,200)); return; }
+  if (!closeR.ok) { alert('Could not close out the old weight: ' + (await closeR.text()).slice(0,200)); return; }
+
+  const newR = await fetch(`${SB}/rest/v1/scrap_part_weights`, {
+    method: 'POST', headers: await authHDR({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ part_pattern: pattern, weight_kg: weight, notes: notes || null, effective_from: today, changed_by: who, change_reason: reason || null })
+  });
+  if (!newR.ok) { alert('Old weight was closed out, but the new one failed to save -- please add it again: ' + (await newR.text()).slice(0,200)); }
   await renderWeightManager();
 }
 
 async function deleteWeightRow(id) {
-  if (!confirm('Remove this weight mapping?')) return;
-  const r = await fetch(`${SB}/rest/v1/scrap_part_weights?id=eq.${id}`, { method: 'DELETE', headers: await authHDR() });
-  if (!r.ok) { alert('Could not delete: ' + (await r.text()).slice(0,200)); return; }
+  if (!confirm('Stop using this weight mapping going forward? (Past estimates that relied on it are kept intact -- this only affects new/future dates.)')) return;
+  const r = await fetch(`${SB}/rest/v1/scrap_part_weights?id=eq.${id}`, {
+    method: 'PATCH', headers: await authHDR({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ effective_to: new Date().toISOString().slice(0,10) })
+  });
+  if (!r.ok) { alert('Could not remove: ' + (await r.text()).slice(0,200)); return; }
   await renderWeightManager();
 }
 
