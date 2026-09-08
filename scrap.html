@@ -175,6 +175,7 @@
     .dsub { font-size: 11px; color: var(--muted); }
     .dclose { background: none; border: none; font-size: 15px; cursor: pointer; color: var(--muted); }
   </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -203,6 +204,7 @@
   <div class="scrap-tabs" role="tablist">
     <button class="scrap-tab active" id="tabBtn-scrap" onclick="switchScrapTab('scrap')">SCRAP</button>
     <button class="scrap-tab" id="tabBtn-parts" onclick="switchScrapTab('parts')">REFURB &amp; TYRE</button>
+    <button class="scrap-tab" id="tabBtn-mgmt" onclick="switchScrapTab('mgmt')">MANAGEMENT</button>
   </div>
 
   <div id="tabPane-scrap">
@@ -334,6 +336,40 @@
   </div>
   </div><!-- /subPane-Tyre -->
   </div><!-- /tabPane-parts -->
+
+  <div id="tabPane-mgmt" style="display:none">
+    <div class="scope-legend">
+      <b>How to read this tab:</b> Built for City Heads to track <b>trajectory</b>, not a single snapshot — is discipline improving or slipping week over week? Backlog % is deliberately left out of this view for now: incomplete weight-reference data for some categories (see Manage Part Weights) distorts it badly when aggregated across many hubs. Revenue and Discrepancy Rate below are unaffected by that issue.
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px">
+        <label style="font-size:12px;color:var(--muted);font-weight:600">CITY</label>
+        <select id="mgmt-city" onchange="loadMgmtTab()" style="padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px"></select>
+        <label style="font-size:12px;color:var(--muted);font-weight:600">WEEKS</label>
+        <select id="mgmt-weeks" onchange="loadMgmtTab()" style="padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px">
+          <option value="8">Last 8 weeks</option>
+          <option value="12" selected>Last 12 weeks</option>
+          <option value="26">Last 26 weeks</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <h3 style="font-size:13px;margin:0 0 8px">Revenue — Weekly</h3>
+          <canvas id="mgmt-chart-revenue" height="110"></canvas>
+        </div>
+        <div>
+          <h3 style="font-size:13px;margin:0 0 8px">Discrepancy Rate — Weekly</h3>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Solid line: any movement meaningfully off System Calculated. Dashed: same, but with no Remark explaining it — this is the one to actually worry about.</div>
+          <canvas id="mgmt-chart-discrepancy" height="110"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3 style="font-size:14px;margin:0 0 4px">Hub Leaderboard</h3>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Ranked by unexplained-discrepancy rate (lowest first), then revenue. "Streak" is consecutive recent weeks with a movement logged and no unexplained gap.</div>
+      <div class="tbl" id="mgmt-leaderboard-wrap"><div class="empty"><span class="spin"></span></div></div>
+    </div>
+  </div><!-- /tabPane-mgmt -->
 
   <div class="panel">
 
@@ -1107,12 +1143,13 @@ async function loadApprovalQueue(city, hub) {
 }
 
 function switchScrapTab(name) {
-  ['scrap','parts'].forEach(t => {
+  ['scrap','parts','mgmt'].forEach(t => {
     const pane = document.getElementById('tabPane-' + t);
     const btn = document.getElementById('tabBtn-' + t);
     if (pane) pane.style.display = (t === name) ? '' : 'none';
     if (btn) btn.classList.toggle('active', t === name);
   });
+  if (name === 'mgmt') loadMgmtTab();
 }
 function switchPartsSubTab(type) {
   ['Refurb','Tyre'].forEach(t => {
@@ -1121,6 +1158,95 @@ function switchPartsSubTab(type) {
     if (pane) pane.style.display = (t === type) ? '' : 'none';
     if (btn) btn.classList.toggle('active', t === type);
   });
+}
+
+let MGMT_REVENUE_CHART = null, MGMT_DISCREPANCY_CHART = null, MGMT_INITIALIZED = false;
+
+function mgmtSeedCity() {
+  const sel = document.getElementById('mgmt-city');
+  if (sel.options.length) return;
+  ['','Bangalore','NCR','Hyderabad','Mumbai'].forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c || 'All Cities';
+    sel.appendChild(o);
+  });
+  sel.value = document.getElementById('f-city').value || '';
+}
+
+async function loadMgmtTab() {
+  mgmtSeedCity();
+  const city = document.getElementById('mgmt-city').value || null;
+  const weeks = parseInt(document.getElementById('mgmt-weeks').value, 10) || 12;
+  const lbWrap = document.getElementById('mgmt-leaderboard-wrap');
+  if (!MGMT_INITIALIZED) { MGMT_INITIALIZED = true; }
+  else { lbWrap.innerHTML = '<div class="empty"><span class="spin"></span></div>'; }
+
+  try {
+    const [trend, leaderboard] = await Promise.all([
+      rpc('get_scrap_health_trend', { p_city: city, p_hub: null, p_weeks: weeks }),
+      rpc('get_scrap_hub_leaderboard', { p_city: city, p_from: null, p_to: null })
+    ]);
+    mgmtRenderCharts(trend.weeks || []);
+    mgmtRenderLeaderboard(leaderboard || []);
+  } catch (e) {
+    console.error('loadMgmtTab failed', e);
+    lbWrap.innerHTML = '<div class="empty" style="color:var(--red)">Error loading — try refreshing.</div>';
+  }
+}
+
+function mgmtWeekLabel(w) {
+  const d = new Date(w.week_start + 'T00:00:00');
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
+
+function mgmtRenderCharts(weeks) {
+  const labels = weeks.map(mgmtWeekLabel);
+
+  const revCtx = document.getElementById('mgmt-chart-revenue');
+  if (MGMT_REVENUE_CHART) MGMT_REVENUE_CHART.destroy();
+  MGMT_REVENUE_CHART = new Chart(revCtx, {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Revenue (₹)', data: weeks.map(w => w.revenue),
+      borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.08)', fill: true, tension: 0.25, pointRadius: 3
+    }] },
+    options: { responsive: true, plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + Number(v).toLocaleString('en-IN') } } } }
+  });
+
+  const discCtx = document.getElementById('mgmt-chart-discrepancy');
+  if (MGMT_DISCREPANCY_CHART) MGMT_DISCREPANCY_CHART.destroy();
+  MGMT_DISCREPANCY_CHART = new Chart(discCtx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Any discrepancy', data: weeks.map(w => w.discrepancy_rate_pct),
+        borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.25, pointRadius: 3 },
+      { label: 'Unexplained (no remark)', data: weeks.map(w => w.unexplained_rate_pct),
+        borderColor: '#dc2626', backgroundColor: 'transparent', borderDash: [6,4], tension: 0.25, pointRadius: 3 }
+    ] },
+    options: { responsive: true, plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } } }
+  });
+}
+
+function mgmtRenderLeaderboard(rows) {
+  const wrap = document.getElementById('mgmt-leaderboard-wrap');
+  if (!rows.length) { wrap.innerHTML = '<div class="empty">No scrap movements logged in this window for the selected city.</div>'; return; }
+  let html = '<table><thead><tr><th>Hub</th><th class="num">Revenue</th><th class="num">Sold (kg)</th><th class="num">Movements</th><th class="num">Discrepancy Rate</th><th class="num">Unexplained</th><th class="num">Streak</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const unexplainedColor = r.unexplained_rate_pct > 0 ? 'color:var(--red);font-weight:600' : '';
+    html += `<tr>
+      <td>${r.hub_name}</td>
+      <td class="num">₹${Number(r.revenue).toLocaleString('en-IN')}</td>
+      <td class="num">${r.sold_kg}</td>
+      <td class="num">${r.movement_count}</td>
+      <td class="num">${r.discrepancy_rate_pct}%</td>
+      <td class="num" style="${unexplainedColor}">${r.unexplained_rate_pct}%</td>
+      <td class="num">${r.streak_weeks} wk${r.streak_weeks === 1 ? '' : 's'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 
 async function loadHubPerformance(from, to, city) {
