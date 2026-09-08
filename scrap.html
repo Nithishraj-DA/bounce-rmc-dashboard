@@ -204,7 +204,9 @@
   <div class="scrap-tabs" role="tablist">
     <button class="scrap-tab active" id="tabBtn-scrap" onclick="switchScrapTab('scrap')">SCRAP</button>
     <button class="scrap-tab" id="tabBtn-parts" onclick="switchScrapTab('parts')">REFURB &amp; TYRE</button>
+    <button class="scrap-tab" id="tabBtn-logmovement" onclick="switchScrapTab('logmovement')">LOG A MOVEMENT</button>
     <button class="scrap-tab" id="tabBtn-mgmt" onclick="switchScrapTab('mgmt')">MANAGEMENT</button>
+    <button class="scrap-tab" id="tabBtn-financeapproval" onclick="switchScrapTab('financeapproval')">FINANCE APPROVAL <span id="aqCountTab" class="pending-flag" style="font-size:11px;margin-left:2px"></span></button>
   </div>
 
   <div id="tabPane-scrap">
@@ -369,8 +371,25 @@
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Ranked by unexplained-discrepancy rate (lowest first), then revenue. "Streak" is consecutive recent weeks with a movement logged and no unexplained gap.</div>
       <div class="tbl" id="mgmt-leaderboard-wrap"><div class="empty"><span class="spin"></span></div></div>
     </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>Recent Transactions <span style="font-weight:400;font-size:11px;color:var(--muted)" id="txSubtitle">(last 10, regardless of the date range above)</span></h3>
+      <div class="tx-filters">
+        <input type="text" id="txSearch" placeholder="Search hub, vendor, category…" oninput="onTxFilterChange()">
+        <select id="txStatus" onchange="onTxFilterChange()"><option value="">All statuses</option><option value="Created">Created</option><option value="Cancelled">Cancelled</option></select>
+        <select id="txVendor" onchange="onTxFilterChange()"><option value="">All vendors</option></select>
+        <select id="txCategory" onchange="onTxFilterChange()"><option value="">All categories</option></select>
+        <button class="btn secondary" style="padding:6px 12px;font-size:12px" onclick="clearTxFilters()">Clear</button>
+      </div>
+      <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+      <table>
+        <thead><tr><th>Date</th><th>Hub</th><th>Type</th><th>Category/Part</th><th>Vendor</th><th class="num">Qty/Wt</th><th class="num">Rate</th><th class="num">Value (₹)</th><th>Status</th><th>Finance Approval</th><th>Actions</th></tr></thead>
+        <tbody id="salesBody"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody>
+      </table>
+      </div>
+    </div>
   </div><!-- /tabPane-mgmt -->
 
+  <div id="tabPane-logmovement" style="display:none">
   <div class="panel">
 
     <h3>Create Scrap / Refurb Movement
@@ -402,33 +421,20 @@
     <button class="btn" id="btn-create-batch" style="margin-top:12px" onclick="createBatch()"><i class="ti ti-file-download"></i> Save &amp; Download PDF</button>
       <span class="save-msg" id="saveMsg" style="color:#16a34a;font-size:11px;display:none">Saved ✓</span>
   </div>
+  </div><!-- /tabPane-logmovement -->
 
+  <div id="tabPane-financeapproval" style="display:none">
   <div class="panel" id="approvalQueuePanel">
     <h3><i class="ti ti-alert-circle"></i> Pending Approval <span id="aqCount" class="pending-flag" style="font-size:12px;margin-left:4px"></span></h3>
-    <div style="overflow-x:auto;max-height:260px;overflow-y:auto">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Finance reviews each movement here, attaches the GST invoice if applicable, and approves. This does not affect Scrap/Refurb/Tyre reconciliation — it only records that Finance has acknowledged the transaction.</div>
+    <div style="overflow-x:auto;max-height:520px;overflow-y:auto">
     <table>
       <thead><tr><th>Movement</th><th>Hub</th><th>Vendor</th><th class="num">Amount (₹)</th><th class="num">Discrepancy %</th><th class="num">Age</th><th></th></tr></thead>
       <tbody id="aqBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
     </table>
     </div>
   </div>
-
-  <div class="panel">
-    <h3>Scrap Transactions <span style="font-weight:400;font-size:11px;color:var(--muted)" id="txSubtitle">(last 10, regardless of the date range above)</span></h3>
-    <div class="tx-filters">
-      <input type="text" id="txSearch" placeholder="Search hub, vendor, category…" oninput="onTxFilterChange()">
-      <select id="txStatus" onchange="onTxFilterChange()"><option value="">All statuses</option><option value="Created">Created</option><option value="Cancelled">Cancelled</option></select>
-      <select id="txVendor" onchange="onTxFilterChange()"><option value="">All vendors</option></select>
-      <select id="txCategory" onchange="onTxFilterChange()"><option value="">All categories</option></select>
-      <button class="btn secondary" style="padding:6px 12px;font-size:12px" onclick="clearTxFilters()">Clear</button>
-    </div>
-    <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
-    <table>
-      <thead><tr><th>Date</th><th>Hub</th><th>Type</th><th>Category/Part</th><th>Vendor</th><th class="num">Qty/Wt</th><th class="num">Rate</th><th class="num">Value (₹)</th><th>Status</th><th>Finance Approval</th><th>Actions</th></tr></thead>
-      <tbody id="salesBody"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody>
-    </table>
-    </div>
-  </div>
+  </div><!-- /tabPane-financeapproval -->
 </div>
 
 <div class="ov" id="cat-ov" onclick="if(event.target===this)closeCatDrill()">
@@ -1186,6 +1192,8 @@ async function loadApprovalQueue(city, hub) {
   groups.sort((a, b) => Math.max(...b.items.map(i => i.age_days)) - Math.max(...a.items.map(i => i.age_days)));
 
   document.getElementById('aqCount').textContent = groups.length ? groups.length : '';
+  const tabBadge = document.getElementById('aqCountTab');
+  if (tabBadge) tabBadge.textContent = groups.length ? groups.length : '';
   const tbody = document.getElementById('aqBody');
   tbody.innerHTML = groups.length ? groups.map(g => {
     const ids = g.items.map(i => i.id);
@@ -1211,7 +1219,7 @@ async function loadApprovalQueue(city, hub) {
 }
 
 function switchScrapTab(name) {
-  ['scrap','parts','mgmt'].forEach(t => {
+  ['scrap','parts','logmovement','mgmt','financeapproval'].forEach(t => {
     const pane = document.getElementById('tabPane-' + t);
     const btn = document.getElementById('tabBtn-' + t);
     if (pane) pane.style.display = (t === name) ? '' : 'none';
