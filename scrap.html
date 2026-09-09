@@ -222,18 +222,6 @@
   <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-6px 0 14px">From worn to worth it.</div>
 
   <div class="panel">
-    <h3>By Category <span style="font-weight:400;font-size:11px;color:var(--muted)">(Est./Backlog are all-time cumulative; Sold/Revenue are for the date range above — click a row to see its parts)</span>
-      <span class="table-tools"><button class="btn secondary" style="padding:4px 10px;font-size:11px" onclick="exportCategoryCSV()">⬇ CSV</button></span>
-    </h3>
-    <div style="overflow-x:auto">
-    <table id="catTable">
-      <thead><tr><th>Category</th><th>Tracking</th><th class="num">Est. Generated (all-time)</th><th class="num">Backlog (all-time)</th><th class="num">Backlog %</th><th class="num">Sold (this range)</th><th class="num">Revenue (₹, this range)</th></tr></thead>
-      <tbody id="catBody"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
-    </table>
-    </div>
-  </div>
-
-  <div class="panel">
     <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(only hubs/categories with at least one logged transaction — showing that last transaction's own amount, vendor, and photo)</span></h3>
     <input type="text" id="hubCatSearch" placeholder="Search hub or category…" oninput="renderHubCategoryDetail()" style="margin-bottom:10px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;width:280px">
     <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
@@ -408,24 +396,6 @@
   </div><!-- /tabPane-financeapproval -->
 </div>
 
-<div class="ov" id="cat-ov" onclick="if(event.target===this)closeCatDrill()">
-  <div class="dpanel">
-    <div class="dhd">
-      <div><h3 id="cat-drill-title">—</h3><div class="dsub" id="cat-drill-sub"></div></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn secondary" style="padding:6px 12px;font-size:11.5px" onclick="exportCatDrillCSV()">⬇ CSV</button>
-        <button class="dclose" onclick="closeCatDrill()">✕</button>
-      </div>
-    </div>
-    <div id="cat-drill-body" style="max-height:70vh;overflow-y:auto">
-      <table>
-        <thead><tr><th>Part Name</th><th class="num">Qty Generated</th><th class="num">Value Generated (₹)</th><th class="num">JCs</th><th class="num">Per Qty Weight (kg)</th><th class="num">Total Weight (kg)</th></tr></thead>
-        <tbody id="cat-drill-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
 <div class="ov" id="edit-mv-ov" onclick="if(event.target===this)closeEditMovement()">
   <div class="dpanel" style="max-width:480px">
     <div class="dhd">
@@ -569,7 +539,6 @@ function isScrapApprover() {
 let REFURB_PARTS = [];
 let VENDORS = [];
 let WEIGHT_ROWS_CACHE = [];
-let SUMMARY = null;
 let _hadFailure = false;
 
 function fmtC(n) { return (n == null || isNaN(n)) ? '—' : '₹' + Math.round(n).toLocaleString('en-IN'); }
@@ -622,13 +591,12 @@ function onTypeChange() {
 }
 
 // Builds one row per category (Scrap) or part (Refurb). "System Calculated"
-// (Pending) is read from data already loaded for the page's own filter
-// (SUMMARY.by_category / ptFunnelRows) rather than a fresh RPC call per row —
-// keeps this number always consistent with what's shown in the tables above,
-// and avoids 15-20 extra round-trips every time the filter changes.
+// (Pending) is fetched fresh via get_scrap_generated_in_period /
+// get_movement_pipeline, scoped to this specific movement's own
+// City/Hub/Period -- not the page's top-level filter, since they can
+// legitimately differ (e.g. logging for a hub you're not currently viewing).
 // Temporary restriction: only these categories are actionable in Create
-// Movement for now (rest of scrap_categories still shows fully in By
-// Category above -- this only limits what's enterable here). Update this
+// Movement for now. Update this
 // list when more categories are ready to go live for data entry.
 const MOVEMENT_ENABLED_CATEGORIES = ['Aluminium', 'Iron', 'Plastic', 'Wires'];
 
@@ -1415,20 +1383,16 @@ async function loadAll() {
   const city = document.getElementById('f-city').value || null;
   const hub = document.getElementById('f-hub').value || null;
   document.getElementById('syncedLbl').textContent = 'Loading…';
-  document.getElementById('catBody').innerHTML = skeletonRows(7, 4);
   document.getElementById('aqBody').innerHTML = skeletonRows(7, 2);
   document.getElementById('salesBody').innerHTML = skeletonRows(11, 4);
 
-  const [summaryResult] = await Promise.all([
-    rpc('get_scrap_summary', { p_from: from, p_to: to, p_city: city, p_hub: hub }),
+  await Promise.all([
     loadApprovalQueue(city, hub),
     ptLoadAndRender(from, to, city, hub),
     loadHubCategoryDetail(city),
     loadSales(from, to, city, hub),
     loadHubTriggerBanner()
   ]);
-  SUMMARY = summaryResult;
-  renderSummary();
   renderMovementRows();
 
   document.getElementById('syncedLbl').textContent = 'Synced ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
@@ -1441,62 +1405,6 @@ async function loadAll() {
   }
 }
 
-let CAT_DRILL_DATA = null, CAT_DRILL_NAME = '';
-async function openCatDrill(category) {
-  document.getElementById('cat-ov').classList.add('on');
-  document.getElementById('cat-drill-title').textContent = category + ' — parts';
-  document.getElementById('cat-drill-sub').textContent = 'Which specific parts are generating this category\'s scrap, matching current filters';
-  CAT_DRILL_NAME = category; CAT_DRILL_DATA = null;
-  const tbody = document.getElementById('cat-drill-tbody');
-  tbody.innerHTML = '<tr><td colspan="6" class="empty"><span class="spin"></span></td></tr>';
-  const from = document.getElementById('f-from').value, to = document.getElementById('f-to').value;
-  const city = document.getElementById('f-city').value || null, hub = document.getElementById('f-hub').value || null;
-  const rows = await rpc('get_scrap_by_part', { p_from: from, p_to: to, p_city: city, p_hub: hub, p_category: category });
-  CAT_DRILL_DATA = rows;
-  if (rows === null) { tbody.innerHTML = '<tr><td colspan="6" class="empty" style="color:var(--red)">Failed to load — try again.</td></tr>'; return; }
-  tbody.innerHTML = rows.length ? rows.map(p => `
-    <tr><td>${p.part_or_labor_name}</td>
-      <td class="num">${fmtN(p.qty_generated)}</td>
-      <td class="num">${fmtC(p.value_generated)}</td>
-      <td class="num">${fmtN(p.jcs)}</td>
-      <td class="num ${p.per_qty_weight_kg == null ? 'muted-cell' : ''}">${p.per_qty_weight_kg != null ? p.per_qty_weight_kg + ' kg' : '—'}</td>
-      <td class="num ${p.total_weight_kg == null ? 'muted-cell' : ''}">${p.total_weight_kg != null ? fmtN(p.total_weight_kg) + ' kg' : '—'}</td></tr>
-  `).join('') : '<tr><td colspan="6" class="empty">No parts found for this category.</td></tr>';
-}
-function closeCatDrill() { document.getElementById('cat-ov').classList.remove('on'); }
-function exportCatDrillCSV() {
-  if (!CAT_DRILL_DATA || !CAT_DRILL_DATA.length) return;
-  const rows = [['Part Name','Qty Generated','Value Generated','JCs','Per Qty Weight (kg)','Total Weight (kg)']];
-  CAT_DRILL_DATA.forEach(p => rows.push([p.part_or_labor_name, p.qty_generated, p.value_generated, p.jcs, p.per_qty_weight_kg ?? '', p.total_weight_kg ?? '']));
-  const csv = rows.map(r => r.map(v => String(v).includes(',') ? `"${v}"` : v).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `scrap_${CAT_DRILL_NAME.replace(/[^a-z0-9]+/gi,'_').toLowerCase()}_parts_${todayIST()}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-function renderSummary() {
-  if (!SUMMARY) {
-    document.getElementById('catBody').innerHTML = '<tr><td colspan="6" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
-    return;
-  }
-  const byCat = SUMMARY.by_category || [];
-
-  document.getElementById('catBody').innerHTML = byCat.length ? byCat.map(c => {
-    const genCell = c.tracking_type === 'weight'
-      ? `${fmtN(c.real_weight_kg)} kg<div style="font-size:9px;color:var(--muted);font-weight:400">${fmtN(c.weighed_qty)}/${fmtN(c.estimated)} pcs weighed (${c.weighed_coverage_pct}%)</div>`
-      : `${fmtN(c.estimated)} ${c.unit}`;
-    const varClass = c.variance > 0 ? 'pending-flag' : '';
-    return `
-    <tr class="cat-row" onclick="openCatDrill('${c.category.replace(/'/g,"\\'")}')"><td>${c.category}</td><td style="color:var(--muted);font-size:11px">${c.tracking_type}</td>
-      <td class="num">${genCell}</td>
-      <td class="num">${c.variance !== 0 ? '<span class="'+varClass+'">'+fmtN(c.variance)+' '+c.unit+'</span>' : fmtN(c.variance)+' '+c.unit}</td>
-      <td class="num">${c.variance_pct != null ? `<span style="padding:2px 8px;border-radius:5px;font-weight:600;${heatColor(c.variance_pct)}">${c.variance_pct}%</span>` : '—'}</td>
-      <td class="num">${fmtN(c.period_sold)} ${c.unit}</td>
-      <td class="num">${fmtC(c.revenue)}</td></tr>
-  `;
-  }).join('') : `<tr><td colspan="7">${emptyState('📦', 'No scrap data for this range/filter.', 'Try widening the date range, or check City/Hub filters above.')}</td></tr>`;
-}
 
 
 let LAST_SALES_ROWS = [];
@@ -2188,16 +2096,7 @@ async function downloadBatchReceiptPDF(batch) {
 }
 
 
-function exportCategoryCSV() {
-  if (!SUMMARY) return;
-  const rows = [['Category','Tracking Type','Est. Generated (all-time)','Backlog (all-time)','Backlog %','Sold (this range)','Revenue (this range)']];
-  (SUMMARY.by_category||[]).forEach(c => rows.push([c.category, c.tracking_type, c.estimated, c.variance, c.variance_pct, c.period_sold, c.revenue]));
-  const csv = rows.map(r => r.map(v => String(v).includes(',') ? `"${v}"` : v).join(',')).join('\n');
-  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = `scrap_by_category_${todayIST()}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-}
+
 
 function reportHeight() { window.parent.postMessage({ type: 'resize-iframe', height: document.body.scrollHeight }, '*'); }
 
