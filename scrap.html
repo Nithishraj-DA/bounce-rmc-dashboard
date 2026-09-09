@@ -232,6 +232,17 @@
     </table>
     </div>
   </div>
+
+  <div class="panel">
+    <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(Available at Hub is uncollected backlog for that hub+category specifically — sorted highest first)</span></h3>
+    <input type="text" id="hubCatSearch" placeholder="Search hub or category…" oninput="renderHubCategoryDetail()" style="margin-bottom:10px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;width:280px">
+    <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
+    <table>
+      <thead><tr><th>Hub</th><th>City</th><th>Category</th><th>Last Transaction</th><th class="num">System Consumed (kg)</th><th class="num">Available at Hub (kg)</th></tr></thead>
+      <tbody id="hubCatBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+    </table>
+    </div>
+  </div>
   </div><!-- /tabPane-scrap -->
 
   <div id="tabPane-parts" style="display:none">
@@ -927,6 +938,36 @@ async function openWeightManager() {
 }
 function closeWeightManager() { document.getElementById('weights-ov').classList.remove('on'); }
 
+let HUB_CAT_DETAIL = [];
+async function loadHubCategoryDetail(city) {
+  try {
+    HUB_CAT_DETAIL = await rpc('get_hub_category_scrap_detail', { p_city: city }) || [];
+    renderHubCategoryDetail();
+  } catch (e) {
+    console.error('loadHubCategoryDetail failed', e);
+    document.getElementById('hubCatBody').innerHTML = '<tr><td colspan="6" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
+  }
+}
+function renderHubCategoryDetail() {
+  const search = (document.getElementById('hubCatSearch').value || '').trim().toLowerCase();
+  const rows = HUB_CAT_DETAIL.filter(r =>
+    !search || r.hub_name.toLowerCase().includes(search) || r.category.toLowerCase().includes(search)
+  );
+  const tbody = document.getElementById('hubCatBody');
+  tbody.innerHTML = rows.length ? rows.map(r => `<tr>
+    <td>${r.hub_name}</td>
+    <td style="color:var(--muted)">${r.city}</td>
+    <td>${r.category}</td>
+    <td>${fmtDateShort(r.last_transaction)}</td>
+    <td class="num">${fmtN(r.system_consumed_kg)}</td>
+    <td class="num" style="${r.available_at_hub_kg > 0 ? 'font-weight:600' : 'color:var(--muted)'}">${fmtN(r.available_at_hub_kg)}</td>
+  </tr>`).join('') : `<tr><td colspan="6">${emptyState('📦', 'No matching hub/category data.', 'Try a different search term.')}</td></tr>`;
+}
+function fmtDateShort(d) {
+  if (!d) return '—';
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+}
+
 async function loadHubTriggerBanner() {
   try {
     const rows = await rpc('get_hub_scrap_trigger_status', {}) || [];
@@ -1379,6 +1420,7 @@ async function loadAll() {
     rpc('get_scrap_summary', { p_from: from, p_to: to, p_city: city, p_hub: hub }),
     loadApprovalQueue(city, hub),
     ptLoadAndRender(from, to, city, hub),
+    loadHubCategoryDetail(city),
     loadSales(from, to, city, hub),
     loadHubTriggerBanner()
   ]);
