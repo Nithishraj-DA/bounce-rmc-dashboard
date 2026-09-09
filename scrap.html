@@ -85,6 +85,9 @@
 
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { text-align: left; padding: 8px 10px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); white-space:nowrap; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { color: var(--text); }
+    .sort-arrow { margin-left: 3px; font-size: 9px; }
     td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text2); }
     tr:last-child td { border-bottom: none; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -226,7 +229,17 @@
     <input type="text" id="hubCatSearch" placeholder="Search hub or category…" oninput="renderHubCategoryDetail()" style="margin-bottom:10px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;width:280px">
     <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
     <table>
-      <thead><tr><th>Hub</th><th>City</th><th>Category</th><th>Last Transaction</th><th class="num">System Consumed (kg)</th><th class="num">Available at Hub (kg)</th><th class="num">Last Amount (₹)</th><th>Last Vendor</th><th>Photo</th></tr></thead>
+      <thead><tr>
+        <th class="sortable" onclick="sortHubCatBy('hub_name')">Hub<span id="sort-hub_name" class="sort-arrow"></span></th>
+        <th class="sortable" onclick="sortHubCatBy('city')">City<span id="sort-city" class="sort-arrow"></span></th>
+        <th class="sortable" onclick="sortHubCatBy('category')">Category<span id="sort-category" class="sort-arrow"></span></th>
+        <th class="sortable" onclick="sortHubCatBy('last_transaction')">Last Transaction<span id="sort-last_transaction" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('system_consumed_kg')">System Consumed (kg)<span id="sort-system_consumed_kg" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('available_at_hub_kg')">Available at Hub (kg)<span id="sort-available_at_hub_kg" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('last_amount')">Last Amount (₹)<span id="sort-last_amount" class="sort-arrow"></span></th>
+        <th class="sortable" onclick="sortHubCatBy('last_vendor')">Last Vendor<span id="sort-last_vendor" class="sort-arrow"></span></th>
+        <th>Photo</th>
+      </tr></thead>
       <tbody id="hubCatBody"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
     </table>
     </div>
@@ -394,6 +407,13 @@
     </div>
   </div>
   </div><!-- /tabPane-financeapproval -->
+</div>
+
+<div class="ov" id="hubcat-photo-ov" onclick="if(event.target===this)closeHubCatPhoto()">
+  <div style="max-width:90vw;max-height:90vh;position:relative">
+    <button class="dclose" onclick="closeHubCatPhoto()" style="position:absolute;top:-36px;right:0;background:#fff">✕</button>
+    <img id="hubcat-photo-img" src="" style="max-width:90vw;max-height:90vh;border-radius:10px;display:block">
+  </div>
 </div>
 
 <div class="ov" id="edit-mv-ov" onclick="if(event.target===this)closeEditMovement()">
@@ -907,6 +927,7 @@ async function openWeightManager() {
 function closeWeightManager() { document.getElementById('weights-ov').classList.remove('on'); }
 
 let HUB_CAT_DETAIL = [];
+let HUB_CAT_SORT = { col: 'available_at_hub_kg', dir: 'desc' }; // matches the RPC's own default order
 async function loadHubCategoryDetail(city) {
   try {
     HUB_CAT_DETAIL = await rpc('get_hub_category_scrap_detail', { p_city: city }) || [];
@@ -916,11 +937,35 @@ async function loadHubCategoryDetail(city) {
     document.getElementById('hubCatBody').innerHTML = '<tr><td colspan="9" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
   }
 }
+function sortHubCatBy(col) {
+  if (HUB_CAT_SORT.col === col) {
+    HUB_CAT_SORT.dir = HUB_CAT_SORT.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    HUB_CAT_SORT = { col, dir: 'asc' };
+  }
+  renderHubCategoryDetail();
+}
 function renderHubCategoryDetail() {
   const search = (document.getElementById('hubCatSearch').value || '').trim().toLowerCase();
-  const rows = HUB_CAT_DETAIL.filter(r =>
+  let rows = HUB_CAT_DETAIL.filter(r =>
     !search || r.hub_name.toLowerCase().includes(search) || r.category.toLowerCase().includes(search)
   );
+
+  const { col, dir } = HUB_CAT_SORT;
+  const mult = dir === 'asc' ? 1 : -1;
+  rows = [...rows].sort((a, b) => {
+    let av = a[col], bv = b[col];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;  // nulls always sort last, regardless of direction
+    if (bv == null) return -1;
+    if (typeof av === 'string') return av.localeCompare(bv) * mult;
+    return (av - bv) * mult;
+  });
+
+  document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+  const activeArrow = document.getElementById('sort-' + col);
+  if (activeArrow) activeArrow.textContent = dir === 'asc' ? '▲' : '▼';
+
   const tbody = document.getElementById('hubCatBody');
   tbody.innerHTML = rows.length ? rows.map(r => `<tr>
     <td>${r.hub_name}</td>
@@ -931,9 +976,14 @@ function renderHubCategoryDetail() {
     <td class="num" style="${r.available_at_hub_kg > 0 ? 'font-weight:600' : 'color:var(--muted)'}">${fmtN(r.available_at_hub_kg)}</td>
     <td class="num">${r.last_amount != null ? fmtC(r.last_amount) : '—'}</td>
     <td>${r.last_vendor || '—'}</td>
-    <td>${r.last_photo_url ? `<a href="${r.last_photo_url}" target="_blank" rel="noopener"><img src="${r.last_photo_url}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;vertical-align:middle"></a>` : '<span style="color:var(--muted)">—</span>'}</td>
+    <td>${r.last_photo_url ? `<img src="${r.last_photo_url}" onclick="openHubCatPhoto('${r.last_photo_url}')" style="width:36px;height:36px;object-fit:cover;border-radius:6px;vertical-align:middle;cursor:pointer">` : '<span style="color:var(--muted)">—</span>'}</td>
   </tr>`).join('') : `<tr><td colspan="9">${emptyState('📦', 'No matching hub/category data.', 'Try a different search term.')}</td></tr>`;
 }
+function openHubCatPhoto(url) {
+  document.getElementById('hubcat-photo-img').src = url;
+  document.getElementById('hubcat-photo-ov').classList.add('on');
+}
+function closeHubCatPhoto() { document.getElementById('hubcat-photo-ov').classList.remove('on'); }
 function fmtDateShort(d) {
   if (!d) return '—';
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
