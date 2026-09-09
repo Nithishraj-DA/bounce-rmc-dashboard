@@ -225,7 +225,7 @@
   <div style="font-size:12px;font-style:italic;color:var(--muted);margin:-6px 0 14px">From worn to worth it.</div>
 
   <div class="panel">
-    <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(only hubs/categories with at least one logged transaction — showing that last transaction's own amount, vendor, and photo)</span></h3>
+    <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(only hubs/categories with at least one logged transaction — System Consumed and Available are scoped to that last transaction's own Period, not all-time)</span></h3>
     <input type="text" id="hubCatSearch" placeholder="Search hub or category…" oninput="renderHubCategoryDetail()" style="margin-bottom:10px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;width:280px">
     <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
     <table>
@@ -234,8 +234,8 @@
         <th class="sortable" onclick="sortHubCatBy('city')">City<span id="sort-city" class="sort-arrow"></span></th>
         <th class="sortable" onclick="sortHubCatBy('category')">Category<span id="sort-category" class="sort-arrow"></span></th>
         <th class="sortable" onclick="sortHubCatBy('last_transaction')">Last Transaction<span id="sort-last_transaction" class="sort-arrow"></span></th>
-        <th class="num sortable" onclick="sortHubCatBy('system_consumed_kg')">System Consumed (kg)<span id="sort-system_consumed_kg" class="sort-arrow"></span></th>
-        <th class="num sortable" onclick="sortHubCatBy('available_at_hub_kg')">Available at Hub (kg)<span id="sort-available_at_hub_kg" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('system_consumed_kg')">System Consumed, Last Period (kg)<span id="sort-system_consumed_kg" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('available_at_hub_kg')">Gap vs Actual (kg)<span id="sort-available_at_hub_kg" class="sort-arrow"></span></th>
         <th class="num sortable" onclick="sortHubCatBy('last_amount')">Last Amount (₹)<span id="sort-last_amount" class="sort-arrow"></span></th>
         <th class="sortable" onclick="sortHubCatBy('last_vendor')">Last Vendor<span id="sort-last_vendor" class="sort-arrow"></span></th>
         <th>Photo</th>
