@@ -235,7 +235,7 @@
         <th class="sortable" onclick="sortHubCatBy('category')">Category<span id="sort-category" class="sort-arrow"></span></th>
         <th class="sortable" onclick="sortHubCatBy('last_transaction')">Last Transaction<span id="sort-last_transaction" class="sort-arrow"></span></th>
         <th class="num sortable" onclick="sortHubCatBy('system_consumed_kg')">System Consumed, Last Period (kg)<span id="sort-system_consumed_kg" class="sort-arrow"></span></th>
-        <th class="num sortable" onclick="sortHubCatBy('available_at_hub_kg')">Gap vs Actual (kg)<span id="sort-available_at_hub_kg" class="sort-arrow"></span></th>
+        <th class="num sortable" onclick="sortHubCatBy('actual_collected_kg')">Actual Collected (kg)<span id="sort-actual_collected_kg" class="sort-arrow"></span></th>
         <th class="num sortable" onclick="sortHubCatBy('last_amount')">Last Amount (₹)<span id="sort-last_amount" class="sort-arrow"></span></th>
         <th class="sortable" onclick="sortHubCatBy('last_vendor')">Last Vendor<span id="sort-last_vendor" class="sort-arrow"></span></th>
         <th>Photo</th>
@@ -927,7 +927,7 @@ async function openWeightManager() {
 function closeWeightManager() { document.getElementById('weights-ov').classList.remove('on'); }
 
 let HUB_CAT_DETAIL = [];
-let HUB_CAT_SORT = { col: 'available_at_hub_kg', dir: 'desc' }; // matches the RPC's own default order
+let HUB_CAT_SORT = { col: 'system_consumed_kg', dir: 'desc' };
 async function loadHubCategoryDetail(city) {
   try {
     HUB_CAT_DETAIL = await rpc('get_hub_category_scrap_detail', { p_city: city }) || [];
@@ -973,7 +973,7 @@ function renderHubCategoryDetail() {
     <td>${r.category}</td>
     <td>${fmtDateShort(r.last_transaction)}</td>
     <td class="num">${fmtN(r.system_consumed_kg)}</td>
-    <td class="num" style="${r.available_at_hub_kg > 0 ? 'font-weight:600' : 'color:var(--muted)'}">${fmtN(r.available_at_hub_kg)}</td>
+    <td class="num">${fmtN(r.actual_collected_kg)}</td>
     <td class="num">${r.last_amount != null ? fmtC(r.last_amount) : '—'}</td>
     <td>${r.last_vendor || '—'}</td>
     <td>${r.last_photo_url ? `<img src="${r.last_photo_url}" onclick="openHubCatPhoto('${r.last_photo_url}')" style="width:36px;height:36px;object-fit:cover;border-radius:6px;vertical-align:middle;cursor:pointer">` : '<span style="color:var(--muted)">—</span>'}</td>
