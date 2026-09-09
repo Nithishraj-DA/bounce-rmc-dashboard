@@ -234,12 +234,12 @@
   </div>
 
   <div class="panel">
-    <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(Available at Hub is uncollected backlog for that hub+category specifically — sorted highest first)</span></h3>
+    <h3>Hub-Level Detail <span style="font-weight:400;font-size:11px;color:var(--muted)">(only hubs/categories with at least one logged transaction — showing that last transaction's own amount, vendor, and photo)</span></h3>
     <input type="text" id="hubCatSearch" placeholder="Search hub or category…" oninput="renderHubCategoryDetail()" style="margin-bottom:10px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;width:280px">
     <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
     <table>
-      <thead><tr><th>Hub</th><th>City</th><th>Category</th><th>Last Transaction</th><th class="num">System Consumed (kg)</th><th class="num">Available at Hub (kg)</th></tr></thead>
-      <tbody id="hubCatBody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+      <thead><tr><th>Hub</th><th>City</th><th>Category</th><th>Last Transaction</th><th class="num">System Consumed (kg)</th><th class="num">Available at Hub (kg)</th><th class="num">Last Amount (₹)</th><th>Last Vendor</th><th>Photo</th></tr></thead>
+      <tbody id="hubCatBody"><tr><td colspan="9" class="empty">Loading…</td></tr></tbody>
     </table>
     </div>
   </div>
@@ -945,7 +945,7 @@ async function loadHubCategoryDetail(city) {
     renderHubCategoryDetail();
   } catch (e) {
     console.error('loadHubCategoryDetail failed', e);
-    document.getElementById('hubCatBody').innerHTML = '<tr><td colspan="6" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
+    document.getElementById('hubCatBody').innerHTML = '<tr><td colspan="9" class="empty" style="color:var(--red)">Failed to load — try Apply again.</td></tr>';
   }
 }
 function renderHubCategoryDetail() {
@@ -961,7 +961,10 @@ function renderHubCategoryDetail() {
     <td>${fmtDateShort(r.last_transaction)}</td>
     <td class="num">${fmtN(r.system_consumed_kg)}</td>
     <td class="num" style="${r.available_at_hub_kg > 0 ? 'font-weight:600' : 'color:var(--muted)'}">${fmtN(r.available_at_hub_kg)}</td>
-  </tr>`).join('') : `<tr><td colspan="6">${emptyState('📦', 'No matching hub/category data.', 'Try a different search term.')}</td></tr>`;
+    <td class="num">${r.last_amount != null ? fmtC(r.last_amount) : '—'}</td>
+    <td>${r.last_vendor || '—'}</td>
+    <td>${r.last_photo_url ? `<a href="${r.last_photo_url}" target="_blank" rel="noopener"><img src="${r.last_photo_url}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;vertical-align:middle"></a>` : '<span style="color:var(--muted)">—</span>'}</td>
+  </tr>`).join('') : `<tr><td colspan="9">${emptyState('📦', 'No matching hub/category data.', 'Try a different search term.')}</td></tr>`;
 }
 function fmtDateShort(d) {
   if (!d) return '—';
